@@ -31,13 +31,15 @@ import {
     resetSettings
 } from './MangaPlusSettings'
 
+import { relevanceScore } from './RelevanceScore'
+
 const BASE_URL = 'https://mangaplus.shueisha.co.jp'
 const API_URL = 'https://jumpg-webapi.tokyo-cdn.com/api'
 
 const langCode = Language.ENGLISH
 
 export const MangaPlusInfo: SourceInfo = {
-    version: '2.0.3',
+    version: '2.0.4',
     name: 'MangaPlus',
     icon: 'icon.png',
     author: 'Rinto-kun',
@@ -381,7 +383,7 @@ export class MangaPlus implements SearchResultsProviding, MangaProviding, Chapte
             .filter((title) => languages.includes(title.language ?? Language.ENGLISH))
             .filter((title) => title.author?.toLowerCase().includes(ltitle) || title.name.toLowerCase().includes(ltitle))
 
-        const titles: PartialSourceManga[] = []
+        const titles: { manga: PartialSourceManga; relevance: number }[] = []
         const collectedIds: string[] = []
 
         for (const item of results ?? []) {
@@ -392,16 +394,26 @@ export class MangaPlus implements SearchResultsProviding, MangaProviding, Chapte
 
             if (!mangaId || !title || collectedIds.includes(mangaId)) continue
 
-            titles.push(App.createPartialSourceManga({
+            const partialManga = App.createPartialSourceManga({
                 mangaId: mangaId,
                 title: title,
                 subtitle: author,
                 image: image
-            }))
+            })
+            
+            let relevance = 0
+            if (query?.title) {
+                relevance = relevanceScore(title, query.title)
+            }
+            
+            titles.push({
+                manga: partialManga,
+                relevance: relevance
+            })
         }
-
+        titles.sort((a, b) => b.relevance - a.relevance)
         return App.createPagedResults({
-            results: titles
+            results: titles.map((r) => r.manga)
         })
     }
 

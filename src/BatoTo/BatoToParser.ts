@@ -4,6 +4,7 @@ import {
     HomeSection,
     HomeSectionType,
     PartialSourceManga,
+    SearchRequest,
     SourceManga,
     Tag,
     TagSection
@@ -16,6 +17,7 @@ import {
 
 import * as CryptoJS from './external/crypto-js.min' // 4.2.0
 import entities = require('entities')
+import { relevanceScore } from './RelevanceScore'
 
 export const parseMangaDetails = ($: CheerioStatic, mangaId: string): SourceManga => {
     const titles: string[] = []
@@ -247,8 +249,8 @@ export const parseTags = (): TagSection[] => {
     return tagSections
 }
 
-export const parseSearch = ($: CheerioStatic, langFilter: boolean, langs: string[]): PartialSourceManga[] => {
-    const mangas: PartialSourceManga[] = []
+export const parseSearch = ($: CheerioStatic, langFilter: boolean, langs: string[], query?: SearchRequest): PartialSourceManga[] => {
+    const mangas: { manga: PartialSourceManga; relevance: number }[] = []
     for (const obj of $('.item', '#series-list').toArray()) {
         const id = $('.item-cover', obj).attr('href')?.replace('/series/', '')?.trim().split('/')[0] ?? ''
         const title: string = $('.item-title', obj).text() ?? ''
@@ -260,14 +262,25 @@ export const parseSearch = ($: CheerioStatic, langFilter: boolean, langs: string
         if (!id || !title) continue
         if (langFilter && !langs.includes(btcode)) continue
 
-        mangas.push(App.createPartialSourceManga({
+        const partialManga = App.createPartialSourceManga({
             image: image,
             title: decodeHTMLEntity(title),
             mangaId: id,
             subtitle: subtitle
-        }))
+        })
+
+        let relevance = 0
+        if (query?.title) {
+            relevance = relevanceScore(title, query.title)
+        }
+
+        mangas.push({
+            manga: partialManga,
+            relevance: relevance
+        })
     }
-    return mangas
+    mangas.sort((a, b) => b.relevance - a.relevance)
+    return mangas.map((r) => r.manga)
 }
 
 export const parseThumbnailUrl = ($: CheerioStatic): string => {

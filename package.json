@@ -24,7 +24,8 @@
     "@paperback/toolchain": "^0.8.7",
     "@paperback/types": "^0.8.7",
     "cheerio": "^1.0.0",
-    "html-entities": "^2.5.2",
-    "js-base64": "^3.7.7"
+    "fast-levenshtein": "^3.0.0",
+    "js-base64": "^3.7.7",
+    "stemmer": "^2.0.1"
   }
 }

@@ -38,7 +38,7 @@ import { populateTags } from './Hentai2ReadTags'
 export const DOMAIN = 'https://hentai2read.com'
 
 export const Hentai2ReadInfo: SourceInfo = {
-    version: '1.0.1',
+    version: '1.0.2',
     name: 'Hentai2Read',
     icon: 'icon.png',
     author: 'EmZedH',
@@ -225,7 +225,7 @@ export class Hentai2Read implements SearchResultsProviding, MangaProviding, Chap
 
         const $ = this.cheerio.load(response.data as string)
 
-        return parseSearchResults($, metadata)
+        return parseSearchResults($, metadata, query)
     }
 
     async getSearchFields(): Promise<SearchField[]> {
