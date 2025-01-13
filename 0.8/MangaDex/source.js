@@ -2353,12 +2353,68 @@ var _Sources = (() => {
         image,
         subtitle
       });
+      let relevance = 0;
+      if (query?.title) {
+        relevance = computeRelevance(title, query.title);
+      }
       results.push({
-        manga: partialManga
+        manga: partialManga,
+        relevance
       });
     }
+    results.sort((a, b) => b.relevance - a.relevance);
     return results.map((r) => r.manga);
   };
+  var levenshteinDistanceMemo = /* @__PURE__ */ (() => {
+    const cache = {};
+    return (a, b) => {
+      const key = `${a}|${b}`;
+      if (key in cache) {
+        return cache[key];
+      }
+      const an = a.length;
+      const bn = b.length;
+      if (an === 0) return bn;
+      if (bn === 0) return an;
+      const matrix = [];
+      for (let i = 0; i <= bn; i++) {
+        matrix[i] = [i];
+      }
+      for (let j = 0; j <= an; j++) {
+        matrix[0][j] = j;
+      }
+      for (let i = 1; i <= bn; i++) {
+        for (let j = 1; j <= an; j++) {
+          if (b.charAt(i - 1) === a.charAt(j - 1)) {
+            matrix[i][j] = matrix[i - 1][j - 1];
+          } else {
+            matrix[i][j] = Math.min(
+              matrix[i - 1][j - 1] + 1,
+              // substitution
+              matrix[i][j - 1] + 1,
+              // insertion
+              matrix[i - 1][j] + 1
+              // deletion
+            );
+          }
+        }
+      }
+      const distance = matrix[bn][an];
+      cache[key] = distance;
+      return distance;
+    };
+  })();
+  function computeRelevance(title, queryTitle) {
+    const titleLC = title.toLowerCase();
+    const queryLC = queryTitle.toLowerCase();
+    if (titleLC === queryLC) {
+      return 100;
+    }
+    const distance = levenshteinDistanceMemo(titleLC, queryLC);
+    const maxLen = Math.max(titleLC.length, queryLC.length);
+    const similarity = (maxLen - distance) / maxLen * 100;
+    return similarity;
+  }
 
   // src/MangaDex/external/tag.json
   var tag_default = [
