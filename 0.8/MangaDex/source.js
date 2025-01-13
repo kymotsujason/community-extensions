@@ -3436,7 +3436,7 @@ var _Sources = (() => {
     description: "Extension that pulls manga from MangaDex",
     icon: "icon.png",
     name: "MangaDex",
-    version: "3.0.5",
+    version: "3.0.6",
     authorWebsite: "https://github.com/nar1n",
     websiteBaseURL: MANGADEX_DOMAIN,
     contentRating: import_types.ContentRating.EVERYONE,
