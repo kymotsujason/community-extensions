@@ -3762,8 +3762,12 @@ var _Sources = (() => {
       const languages = await getLanguages(this.stateManager);
       const offset = metadata?.offset ?? 0;
       let results = [];
-      const searchType = query.title?.match(/[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/i) ? "ids[]" : "title";
-      const url = new URLBuilder(this.MANGADEX_API).addPathComponent("manga").addQueryParameter(searchType, query?.title?.replace(/ /g, "+") || "").addQueryParameter("limit", 100).addQueryParameter("hasAvailableChapters", true).addQueryParameter("availableTranslatedLanguage", languages).addQueryParameter("offset", offset).addQueryParameter("contentRating", ratings).addQueryParameter("includes", ["cover_art"]).addQueryParameter("includedTags", query.includedTags?.map((x) => x.id)).addQueryParameter("includedTagsMode", query.includeOperator).addQueryParameter("excludedTags", query.excludedTags?.map((x) => x.id)).addQueryParameter("excludedTagsMode", query.excludeOperator).buildUrl();
+      const title = query?.title?.trim() || "";
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      const isUUID = uuidRegex.test(title);
+      const searchType = isUUID ? "ids[]" : "title";
+      const encodedTitle = encodeURIComponent(title);
+      const url = new URLBuilder(this.MANGADEX_API).addPathComponent("manga").addQueryParameter(searchType, encodedTitle).addQueryParameter("limit", 100).addQueryParameter("hasAvailableChapters", true).addQueryParameter("availableTranslatedLanguage", languages).addQueryParameter("offset", offset).addQueryParameter("contentRating", ratings).addQueryParameter("includes", ["cover_art"]).addQueryParameter("includedTags", query.includedTags?.map((x) => x.id)).addQueryParameter("includedTagsMode", query.includeOperator).addQueryParameter("excludedTags", query.excludedTags?.map((x) => x.id)).addQueryParameter("excludedTagsMode", query.excludeOperator).buildUrl();
       const request = App.createRequest({
         url,
         method: "GET"
