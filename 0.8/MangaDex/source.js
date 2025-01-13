@@ -2354,7 +2354,7 @@ var _Sources = (() => {
         subtitle
       });
       let relevance = 0;
-      if (query.title) {
+      if (query?.title) {
         relevance = computeRelevance(title, query.title);
       }
       results.push({
