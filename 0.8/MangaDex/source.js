@@ -3170,8 +3170,8 @@ var _Sources = (() => {
     return splitTokens;
   }
   function areSynonyms(word1, word2) {
-    const synonyms1 = /* @__PURE__ */ new Set([(0, import_synonyms.default)(word1, "n"), ...(0, import_synonyms.default)(word1, "v")]);
-    const synonyms2 = /* @__PURE__ */ new Set([(0, import_synonyms.default)(word2, "n"), ...(0, import_synonyms.default)(word2, "v")]);
+    const synonyms1 = /* @__PURE__ */ new Set([word1, ...(0, import_synonyms.default)(word1, "n"), ...(0, import_synonyms.default)(word1, "v")]);
+    const synonyms2 = /* @__PURE__ */ new Set([word2, ...(0, import_synonyms.default)(word2, "n"), ...(0, import_synonyms.default)(word2, "v")]);
     if (synonyms1.has(word2) || synonyms2.has(word1)) {
       return true;
     }
