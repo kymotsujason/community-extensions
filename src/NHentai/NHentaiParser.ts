@@ -3,7 +3,8 @@ import {
     ChapterDetails,
     PartialSourceManga,
     Tag,
-    Chapter
+    Chapter,
+    SearchRequest
 } from '@paperback/types'
 
 import { NHLanguages } from './NHentaiHelper'
@@ -14,6 +15,7 @@ import {
     QueryResponse,
     TagObject
 } from './NHentaiInterfaces'
+import { relevanceScore } from './RelevanceScore'
 
 export const parseMangaDetails = (data: Gallery): SourceManga => {
     const artist = getArtist(data)
@@ -60,8 +62,8 @@ export const parseChapterDetails = (data: Gallery, mangaId: string): ChapterDeta
     })
 }
 
-export const parseSearch = (data: QueryResponse): PartialSourceManga[] => {
-    const tiles: PartialSourceManga[] = []
+export const parseSearch = (data: QueryResponse, query?: SearchRequest): PartialSourceManga[] => {
+    const tiles: { manga: PartialSourceManga; relevance: number }[] = []
     const collectedIds: string[] = []
 
     if (!data?.result) {
@@ -72,15 +74,26 @@ export const parseSearch = (data: QueryResponse): PartialSourceManga[] => {
     for (const gallery of data.result) {
 
         if (collectedIds.includes(gallery.id.toString())) continue
-        tiles.push(App.createPartialSourceManga({
+        const partialManga = App.createPartialSourceManga({
             image: `https://t3.nhentai.net/galleries/${gallery.media_id}/cover.${typeOfImage(gallery.images.cover)}`,
             title: gallery.title.pretty,
             mangaId: gallery.id.toString(),
             subtitle: NHLanguages.getName(getLanguage(gallery)).substring(0, 3) + ' | Pgs: ' + gallery.num_pages
-        }))
+        })
+
+        let relevance = 0
+        if (query?.title) {
+            relevance = relevanceScore(gallery.title.pretty, query.title)
+        }
+
+        tiles.push({
+            manga: partialManga,
+            relevance: relevance
+        })
         collectedIds.push(gallery.id.toString())
     }
-    return tiles
+    tiles.sort((a, b) => b.relevance - a.relevance)
+    return tiles.map((r) => r.manga)
 }
 
 // Utility

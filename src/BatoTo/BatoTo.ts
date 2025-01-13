@@ -45,7 +45,7 @@ import {
 const BATO_DOMAIN = 'https://batocomic.org'
 
 export const BatoToInfo: SourceInfo = {
-    version: '3.1.4',
+    version: '3.1.5',
     name: 'BatoTo',
     icon: 'icon.png',
     author: 'niclimcy',
@@ -214,7 +214,7 @@ export class BatoTo implements SearchResultsProviding, MangaProviding, ChapterPr
 
         const response = await this.requestManager.schedule(request, 1)
         const $ = this.cheerio.load(response.data as string)
-        const manga = parseSearch($, langSearchFilter, langs)
+        const manga = parseSearch($, langSearchFilter, langs, query)
 
         metadata = !isLastPage($) ? { page: page + 1 } : undefined
         return App.createPagedResults({

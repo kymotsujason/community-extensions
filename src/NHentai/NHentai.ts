@@ -43,7 +43,7 @@ import { popularTags } from './tags.json'
 const NHENTAI_URL = 'https://nhentai.net'
 
 export const NHentaiInfo: SourceInfo = {
-    version: '4.0.9',
+    version: '4.0.10',
     name: 'nhentai',
     icon: 'icon.png',
     author: 'NotMarek & Netsky',
@@ -171,7 +171,7 @@ export class NHentai implements SearchResultsProviding, MangaProviding, ChapterP
 
             const jsonData = this.parseJson(response)
             return App.createPagedResults({
-                results: parseSearch({ result: [jsonData], num_pages: 1, per_page: 1 }),
+                results: parseSearch({ result: [jsonData], num_pages: 1, per_page: 1 }, query),
                 metadata: {
                     page: page + 1,
                     stopSearch: true
@@ -191,7 +191,7 @@ export class NHentai implements SearchResultsProviding, MangaProviding, ChapterP
 
             const jsonData = this.parseJson(response)
             return App.createPagedResults({
-                results: parseSearch(jsonData),
+                results: parseSearch(jsonData, query),
                 metadata: {
                     page: page + 1
                 }

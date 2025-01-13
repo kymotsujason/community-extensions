@@ -4,6 +4,7 @@ import {
     PagedResults,
     PartialSourceManga,
     SearchField,
+    SearchRequest,
     Tag,
     TagSection
 } from '@paperback/types'
@@ -18,6 +19,7 @@ import {
     tags,
     populateTags
 } from './Hentai2ReadTags'
+import { relevanceScore } from './RelevanceScore'
 
 export let nextSearchPageUrl = ''
 
@@ -144,27 +146,38 @@ export const parseSearchFields = (): SearchField[] => {
     return searchFields
 }
 
-export const parseSearchResults = ($: CheerioStatic, metadata: any): PagedResults => {
+export const parseSearchResults = ($: CheerioStatic, metadata: any, query?: SearchRequest): PagedResults => {
     const page: number = metadata?.page ?? 1
-    const mangas: PartialSourceManga[] = []
+    const mangas: { manga: PartialSourceManga; relevance: number }[] = []
     for (const manga of $('.col-xs-6.col-sm-4.col-md-3.col-xl-2', '.row.book-grid').toArray()) {
         const image = $('div > div > picture > img', manga).attr('src') ?? ''
         const title = $('div > div > a.title > span', manga).text().trim() ?? ''
         const id = $('div > div > a.title', manga).attr('href')?.replace('https://hentai2read.com/', '')?.replace('/', '')?.trim() ?? ''
 
         if (!id || !title) continue
-        mangas.push(App.createPartialSourceManga({
+        const partialManga = App.createPartialSourceManga({
             image: image,
             title: decodeHTMLEntity(title),
             mangaId: id
-        }))
+        })
+
+        let relevance = 0
+        if (query?.title) {
+            relevance = relevanceScore(title, query.title)
+        }
+
+        mangas.push({
+            manga: partialManga,
+            relevance: relevance
+        })
     }
 
     nextSearchPageUrl = $('#js-linkNext').attr('href') ?? ''
 
     metadata = !isLastPage($) ? { page: page + 1 } : undefined
+    mangas.sort((a, b) => b.relevance - a.relevance)
     return App.createPagedResults({
-        results: mangas,
+        results: mangas.map((r) => r.manga),
         metadata
     })
 }
