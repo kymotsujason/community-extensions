@@ -2336,26 +2336,85 @@ var _Sources = (() => {
   }
 
   // src/MangaDex/MangaDexParser.ts
-  var parseMangaList = async (object, source, thumbnailSelector) => {
+  var parseMangaList = async (object, source, thumbnailSelector, query) => {
     const results = [];
     for (const manga of object) {
-      const mangaId = manga.id;
-      const mangaDetails = manga.attributes;
-      const title = source.decodeHTMLEntity(mangaDetails.title.en ?? mangaDetails.altTitles.map((x) => Object.values(x).find((v) => v !== void 0)).find((t) => t !== void 0));
-      const coverFileName = manga.relationships.filter((x) => x.type == "cover_art").map((x) => x.attributes?.fileName)[0];
+      const mangaId = manga.id ?? "";
+      const mangaDetails = manga.attributes ?? {};
+      const title = source.decodeHTMLEntity(
+        mangaDetails.title?.en ?? (mangaDetails.altTitles ?? []).map((x) => Object.values(x ?? {}).find((v) => v !== void 0)).find((t) => t !== void 0)
+      ) || "Unknown Title";
+      const coverFileName = (manga.relationships ?? []).filter((x) => x.type == "cover_art").map((x) => x.attributes?.fileName)[0];
       const image = coverFileName ? `${source.COVER_BASE_URL}/${mangaId}/${coverFileName}${MDImageQuality.getEnding(await thumbnailSelector(source.stateManager))}` : "https://mangadex.org/_nuxt/img/cover-placeholder.d12c3c5.jpg";
       const subtitle = `${mangaDetails.lastVolume ? `Vol. ${mangaDetails.lastVolume}` : ""} ${mangaDetails.lastChapter ? `Ch. ${mangaDetails.lastChapter}` : ""}`;
-      results.push(
-        App.createPartialSourceManga({
-          mangaId,
-          title,
-          image,
-          subtitle
-        })
-      );
+      const partialManga = App.createPartialSourceManga({
+        mangaId,
+        title,
+        image,
+        subtitle
+      });
+      let relevance = 0;
+      if (query.title) {
+        relevance = computeRelevance(title, query.title);
+      }
+      results.push({
+        manga: partialManga,
+        relevance
+      });
     }
-    return results;
+    results.sort((a, b) => b.relevance - a.relevance);
+    return results.map((r) => r.manga);
   };
+  var levenshteinDistanceMemo = /* @__PURE__ */ (() => {
+    const cache = {};
+    return (a, b) => {
+      const key = `${a}|${b}`;
+      if (key in cache) {
+        return cache[key];
+      }
+      const an = a.length;
+      const bn = b.length;
+      if (an === 0) return bn;
+      if (bn === 0) return an;
+      const matrix = [];
+      for (let i = 0; i <= bn; i++) {
+        matrix[i] = [i];
+      }
+      for (let j = 0; j <= an; j++) {
+        matrix[0][j] = j;
+      }
+      for (let i = 1; i <= bn; i++) {
+        for (let j = 1; j <= an; j++) {
+          if (b.charAt(i - 1) === a.charAt(j - 1)) {
+            matrix[i][j] = matrix[i - 1][j - 1];
+          } else {
+            matrix[i][j] = Math.min(
+              matrix[i - 1][j - 1] + 1,
+              // substitution
+              matrix[i][j - 1] + 1,
+              // insertion
+              matrix[i - 1][j] + 1
+              // deletion
+            );
+          }
+        }
+      }
+      const distance = matrix[bn][an];
+      cache[key] = distance;
+      return distance;
+    };
+  })();
+  function computeRelevance(title, queryTitle) {
+    const titleLC = title.toLowerCase();
+    const queryLC = queryTitle.toLowerCase();
+    if (titleLC === queryLC) {
+      return 100;
+    }
+    const distance = levenshteinDistanceMemo(titleLC, queryLC);
+    const maxLen = Math.max(titleLC.length, queryLC.length);
+    const similarity = (maxLen - distance) / maxLen * 100;
+    return similarity;
+  }
 
   // src/MangaDex/external/tag.json
   var tag_default = [
@@ -3436,7 +3495,7 @@ var _Sources = (() => {
     description: "Extension that pulls manga from MangaDex",
     icon: "icon.png",
     name: "MangaDex",
-    version: "3.0.6",
+    version: "3.0.7",
     authorWebsite: "https://github.com/nar1n",
     websiteBaseURL: MANGADEX_DOMAIN,
     contentRating: import_types.ContentRating.EVERYONE,
@@ -3670,7 +3729,7 @@ var _Sources = (() => {
       if (json.data === void 0) {
         throw new Error("Failed to parse json for the given search");
       }
-      results = await parseMangaList(json.data, this, getSearchThumbnail);
+      results = await parseMangaList(json.data, this, getSearchThumbnail, query);
       return App.createPagedResults({
         results,
         metadata: { offset: offset + 100 }
