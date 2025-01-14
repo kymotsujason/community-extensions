@@ -2058,6 +2058,9 @@ var _Sources = (() => {
       tokenBody: await parseAccessToken(accessToken)
     };
   }
+  async function getProxyServer(stateManager) {
+    return await stateManager.retrieve("proxy_server") ?? "";
+  }
   function contentSettings(stateManager) {
     return App.createDUINavigationButton({
       id: "content_settings",
@@ -2073,7 +2076,8 @@ var _Sources = (() => {
                 getLanguages(stateManager),
                 getRatings(stateManager),
                 getDataSaver(stateManager),
-                getSkipSameChapter(stateManager)
+                getSkipSameChapter(stateManager),
+                getProxyServer(stateManager)
               ]);
               return await [
                 App.createDUISelect({
@@ -2129,6 +2133,16 @@ var _Sources = (() => {
                     get: async () => forcePort443(stateManager),
                     set: async (newValue) => {
                       await stateManager.store("force_port_443", newValue);
+                    }
+                  })
+                }),
+                App.createDUIInputField({
+                  id: "proxy_server",
+                  label: "Proxy Server",
+                  value: App.createDUIBinding({
+                    get: async () => getProxyServer(stateManager),
+                    set: async (newValue) => {
+                      await stateManager.store("proxy_server", newValue);
                     }
                   })
                 })
@@ -3798,7 +3812,7 @@ var _Sources = (() => {
     description: "Extension that pulls manga from MangaDex",
     icon: "icon.png",
     name: "MangaDex",
-    version: "3.0.7",
+    version: "3.0.8",
     authorWebsite: "https://github.com/nar1n",
     websiteBaseURL: MANGADEX_DOMAIN,
     contentRating: import_types.ContentRating.EVERYONE,
