@@ -3109,7 +3109,7 @@ var _Sources = (() => {
     return myers_x(a, b);
   };
 
-  // src/RelevanceScore/RelevanceScore.ts
+  // src/BatoTo/RelevanceScore.ts
   var relevanceScore = (title, queryTitle) => {
     const titleWords = tokenize(title);
     const queryWords = tokenize(queryTitle);
