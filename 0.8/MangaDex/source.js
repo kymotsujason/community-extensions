@@ -2371,7 +2371,7 @@ var _Sources = (() => {
                       method: "HEAD"
                     });
                     const response = await requestManager.schedule(request, 1);
-                    return new Error(`@@@@@@@@@@@@@@@@@@@ ${response.status}`);
+                    throw new Error(`@@@@@@@@@@@@@@@@@@@`);
                   }
                 })
               ];
