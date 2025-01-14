@@ -2061,6 +2061,9 @@ var _Sources = (() => {
   async function getProxyServer(stateManager) {
     return await stateManager.retrieve("proxy_server") ?? "";
   }
+  async function enableProxyServer(stateManager) {
+    return await stateManager.retrieve("enable_proxy_server") ?? false;
+  }
   function contentSettings(stateManager) {
     return App.createDUINavigationButton({
       id: "content_settings",
@@ -2348,9 +2351,20 @@ var _Sources = (() => {
             id: "proxy",
             rows: async () => {
               await Promise.all([
-                getProxyServer(stateManager)
+                getProxyServer(stateManager),
+                enableProxyServer(stateManager)
               ]);
               return await [
+                App.createDUISwitch({
+                  id: "enable_proxy_server",
+                  label: "Enable Proxy Server",
+                  value: App.createDUIBinding({
+                    get: async () => enableProxyServer(stateManager),
+                    set: async (newValue) => {
+                      await stateManager.store("enable_proxy_server", newValue);
+                    }
+                  })
+                }),
                 App.createDUIInputField({
                   id: "proxy_server",
                   label: "Proxy Server",
@@ -4041,8 +4055,9 @@ var _Sources = (() => {
       const dataSaver = await getDataSaver(this.stateManager);
       const forcePort = await forcePort443(this.stateManager);
       const proxyURL = await getProxyServer(this.stateManager);
+      const proxyEnabled = await enableProxyServer(this.stateManager);
       let json;
-      if (proxyURL != "") {
+      if (proxyEnabled && proxyURL != "") {
         const url = new URLBuilder(proxyURL).addPathComponent("manga").addQueryParameter("chapterId", `${chapterId}`).buildUrl();
         const request = App.createRequest({
           url,
