@@ -2370,8 +2370,11 @@ var _Sources = (() => {
                       url: `${proxyURL}`,
                       method: "HEAD"
                     });
-                    const response = await requestManager.schedule(request, 1);
-                    throw new Error(`@@@@@@@@@@@@@@@@@@@ ${response.status}`);
+                    try {
+                      await requestManager.schedule(request, 1);
+                    } catch (error) {
+                      throw new Error(`Failed to connect to proxy server: ${proxyURL} - ${error.message}`);
+                    }
                   }
                 })
               ];
