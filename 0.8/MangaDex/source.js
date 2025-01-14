@@ -4080,7 +4080,6 @@ var _Sources = (() => {
         pages = chapterDetails.dataSaver.map((x) => `${serverUrl}/data-saver/${chapterDetails.hash}/${x}`);
       } else {
         pages = chapterDetails.data.map((x) => `${serverUrl}/data/${chapterDetails.hash}/${x}`);
-        throw new Error(`Failed to parse json results: ${pages[0]}`);
       }
       return App.createChapterDetails({
         id: chapterId,
