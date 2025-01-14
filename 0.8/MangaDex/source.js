@@ -5536,6 +5536,7 @@ var _Sources = (() => {
                   id: "test_proxy_server",
                   label: "Test Proxy Server",
                   onTap: async () => {
+                    throw new Error("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ Starting proxy test...");
                     const urlString = await getProxyServer(stateManager);
                     if (isUrlValid(urlString)) {
                       const request = App.createRequest({
