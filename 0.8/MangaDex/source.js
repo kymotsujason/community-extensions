@@ -4043,7 +4043,7 @@ var _Sources = (() => {
       const proxyURL = await getProxyServer(this.stateManager);
       let json;
       if (proxyURL != "") {
-        const url = new URLBuilder(proxyURL).addPathComponent("manga").addQueryParameter("chapterId", `{${chapterId}}`).buildUrl();
+        const url = new URLBuilder(proxyURL).addPathComponent("manga").addQueryParameter("chapterId", `${chapterId}`).buildUrl();
         const request = App.createRequest({
           url,
           method: "GET"
