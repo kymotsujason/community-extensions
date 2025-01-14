@@ -509,14 +509,14 @@ var _Sources = (() => {
       "use strict";
       Object.defineProperty(exports, "__esModule", { value: true });
       exports.BadgeColor = void 0;
-      var BadgeColor;
-      (function(BadgeColor2) {
-        BadgeColor2["BLUE"] = "default";
-        BadgeColor2["GREEN"] = "success";
-        BadgeColor2["GREY"] = "info";
-        BadgeColor2["YELLOW"] = "warning";
-        BadgeColor2["RED"] = "danger";
-      })(BadgeColor = exports.BadgeColor || (exports.BadgeColor = {}));
+      var BadgeColor2;
+      (function(BadgeColor3) {
+        BadgeColor3["BLUE"] = "default";
+        BadgeColor3["GREEN"] = "success";
+        BadgeColor3["GREY"] = "info";
+        BadgeColor3["YELLOW"] = "warning";
+        BadgeColor3["RED"] = "danger";
+      })(BadgeColor2 = exports.BadgeColor || (exports.BadgeColor = {}));
     }
   });
 
@@ -721,899 +721,816 @@ var _Sources = (() => {
     }
   });
 
-  // src/MangaPlus/MangaPlus.ts
-  var MangaPlus_exports = {};
-  __export(MangaPlus_exports, {
-    MangaPlus: () => MangaPlus,
-    MangaPlusInfo: () => MangaPlusInfo
+  // src/NHentai/NHentai.ts
+  var NHentai_exports = {};
+  __export(NHentai_exports, {
+    NHentai: () => NHentai,
+    NHentaiInfo: () => NHentaiInfo
   });
   var import_types = __toESM(require_lib());
 
-  // src/MangaPlus/MangaPlusHelper.ts
-  var Title = class {
-    constructor(titleId, name, portraitImageUrl, landscapeImageUrl, author) {
-      this.viewCount = 0;
-      this.language = "ENGLISH" /* ENGLISH */;
-      this.titleId = titleId;
-      this.name = name;
-      this.portraitImageUrl = portraitImageUrl;
-      this.landscapeImageUrl = landscapeImageUrl;
-      if (author) this.author = author;
-    }
-  };
-  var TitleDetailView = class _TitleDetailView {
+  // src/NHentai/NHentaiHelper.ts
+  var NHLanguagesClass = class {
     constructor() {
-      this.nextTimeStamp = 0;
-      this.viewingPeriodDescription = "";
-      this.nonAppearanceInfo = "";
-      this.chapterListGroup = [];
-      this.firstChapterList = [];
-      this.lastChapterList = [];
-      this.isSimulReleased = false;
-      this.chaptersDescending = true;
+      this.Languages = [
+        // Include all langauages
+        {
+          name: "Include All",
+          NHCode: "",
+          lang: "Unknown",
+          default: true
+        },
+        {
+          // English
+          name: "English",
+          NHCode: "english",
+          lang: "\u{1F1EC}\u{1F1E7}"
+        },
+        {
+          // Japanese
+          name: "Japanese",
+          NHCode: "japanese",
+          lang: "\u{1F1EF}\u{1F1F5}"
+        },
+        {
+          // Chinese (Simplified)
+          name: "Chinese",
+          NHCode: "chinese",
+          lang: "\u{1F1E8}\u{1F1F3}"
+        }
+      ];
+      this.Languages = this.Languages.sort((a, b) => a.name > b.name ? 1 : -1);
     }
-    get isWebtoon() {
-      return this.firstChapterList.every((chapter) => chapter.isVerticalOnly) && this.lastChapterList.every((chapter) => chapter.isVerticalOnly);
+    getNHCodeList() {
+      return this.Languages.map((Language) => Language.NHCode);
     }
-    get isOneShot() {
-      return this.chapterCount == 1 && this.firstChapterList.at(0)?.name?.localeCompare("one-shot", void 0, { "sensitivity": "base" }) == 0;
+    getName(NHCode) {
+      return this.Languages.filter((Language) => Language.NHCode == NHCode)[0]?.name ?? "Unknown";
     }
-    get chapterCount() {
-      return this.firstChapterList?.length + this.lastChapterList?.length;
+    getLangCode(NHCode) {
+      return this.Languages.filter((Language) => Language.NHCode == NHCode)[0]?.lang ?? "Unknown";
     }
-    get isReEdition() {
-      return this.viewingPeriodDescription?.search(_TitleDetailView.REEDITION_REGEX) != 0;
+    getDefault() {
+      return this.Languages.filter((Language) => Language.default).map((Language) => Language.NHCode);
     }
-    get isCompleted() {
-      return this.nonAppearanceInfo?.search(_TitleDetailView.COMPLETED_REGEX) != 0 || this.isOneShot;
+  };
+  var NHLanguages = new NHLanguagesClass();
+  var NHSortOrderClass = class {
+    constructor() {
+      this.sortOrders = [
+        {
+          // Sort by popular
+          name: "Popular All-Time",
+          NHCode: "popular",
+          shortcuts: ["s:p", "s:popular", "sort:p", "sort:popular"],
+          default: true
+        },
+        {
+          // Sort by popular this week
+          name: "Popular This Week",
+          NHCode: "popular-week",
+          shortcuts: ["s:pw", "s:w", "s:popular-week", "sort:pw", "sort:w", "sort:popular-week"]
+        },
+        {
+          // Sort by popular today
+          name: "Popular Today",
+          NHCode: "popular-today",
+          shortcuts: ["s:pt", "s:t", "s:popular-today", "sort:pt", "sort:t", "sort:popular-today"]
+        },
+        {
+          // Sort by recent
+          name: "Most Recent",
+          NHCode: "date",
+          shortcuts: ["s:r", "s:recent", "sort:r", "sort:recent"]
+        }
+      ];
+      this.sortOrders = this.sortOrders.sort((a, b) => a.name > b.name ? 1 : -1);
     }
-    get isOnHiatus() {
-      return this.nonAppearanceInfo?.search(_TitleDetailView.HIATUS_REGEX) != 0;
-    }
-    get genres() {
-      const genres = [];
-      if (this.isSimulReleased && !this.isReEdition && !this.isOneShot) genres.push("Simulrelease");
-      if (this.isOneShot) genres.push("One-shot");
-      if (this.isReEdition) genres.push("Re-edition");
-      if (this.isWebtoon) genres.push("Webtoon");
-      return genres;
-    }
-    static fromJson(str) {
-      const bopp = JSON.parse(str);
-      if (bopp.success?.titleDetailView === void 0) throw Error("Cannot find manga");
-      const json = bopp.success.titleDetailView;
-      const obj = new _TitleDetailView();
-      if (json.title === void 0) {
-        throw Error("Cannot find title");
+    containsShortcut(query) {
+      for (const SortOrder of this.sortOrders) {
+        for (const shortcut of SortOrder.shortcuts) {
+          if (query.includes(shortcut)) {
+            return [SortOrder.NHCode, shortcut];
+          }
+        }
       }
-      const title = json.title;
-      obj.title = new Title(title.titleId, title.name, title.portraitImageUrl, title.landscapeImageUrl, title.author);
-      obj.titleImageUrl = json.titleImageUrl;
-      obj.overview = json.overview;
-      obj.backgroundImageUrl = json.backgroundImageUrl;
-      obj.nextTimeStamp = json.nextTimeStamp;
-      obj.viewingPeriodDescription = json.viewingPeriodDescription;
-      obj.nonAppearanceInfo = json.nonAppearanceInfo;
-      obj.firstChapterList = json.chapterListGroup?.flatMap((a) => a.firstChapterList ?? []).map((chapter) => Object.assign(new Chapter(1, 1, "", 1, 1), chapter));
-      obj.lastChapterList = json.chapterListGroup?.flatMap((a) => a.lastChapterList ?? []).map((chapter) => Object.assign(new Chapter(1, 1, "", 1, 1), chapter));
-      return obj;
+      return ["", ""];
     }
-    toSourceManga() {
-      const authors = this.title?.author?.split("/");
-      return App.createSourceManga({
-        id: this.title?.titleId.toString() ?? "",
-        mangaInfo: App.createMangaInfo({
-          image: "imageMangaId=" + this.title?.titleId,
-          titles: [this.title?.name ?? ""],
-          author: authors ? authors[0]?.trimEnd() : this.title?.author ?? "",
-          artist: authors ? authors[1]?.trimStart() : this.title?.author ?? "",
-          desc: (this.overview ?? "") + "\n\n" + (this.viewingPeriodDescription ?? ""),
-          tags: [
-            App.createTagSection({
-              id: "0",
-              label: "genres",
-              tags: this.genres.map((genre) => App.createTag({ id: genre, label: genre }))
-            })
-          ],
-          status: this.isCompleted ? "Completed" : this.isOnHiatus ? "On hiatus" : "Ongoing"
-        })
-      });
+    getNHCodeList() {
+      return this.sortOrders.map((SortOrder) => SortOrder.NHCode);
     }
-    static {
-      this.COMPLETED_REGEX = /completado|complete|completo/;
+    getName(NHCode) {
+      return this.sortOrders.filter((SortOrder) => SortOrder.NHCode == NHCode)[0]?.name ?? "Unknown";
     }
-    static {
-      this.HIATUS_REGEX = /on a hiatus/i;
-    }
-    static {
-      this.REEDITION_REGEX = /revival|remasterizada/;
+    getDefault() {
+      return this.sortOrders.filter((SortOrder) => SortOrder.default).map((SortOrder) => SortOrder.NHCode);
     }
   };
-  var Chapter = class {
-    constructor(titleId, chapterId, name, startTimeStamp, endTimeStamp) {
-      this.isVerticalOnly = false;
-      this.titleId = titleId;
-      this.chapterId = chapterId;
-      this.name = name;
-      this.startTimeStamp = startTimeStamp;
-      this.endTimeStamp = endTimeStamp;
+  var NHSortOrders = new NHSortOrderClass();
+  function hasNoResults(data) {
+    console.log(data);
+    if (data.error) {
+      console.error(data.error);
+      return true;
     }
-    get isExpired() {
-      return this.subTitle == null;
-    }
-    toSChapter() {
-      const chapNum = parseFloat(this.name.slice(this.name.lastIndexOf("#") + 1));
-      return App.createChapter({
-        id: this.chapterId.toString(),
-        name: this.subTitle ? this.subTitle : "",
-        chapNum: isNaN(chapNum) ? 0 : chapNum,
-        sortingIndex: isNaN(chapNum) ? -1 : chapNum,
-        time: new Date(this.startTimeStamp * 1e3)
-      });
-    }
-  };
+    return false;
+  }
 
-  // src/MangaPlus/MangaPlusSettings.ts
-  var getLanguages = async (stateManager) => {
-    return await stateManager.retrieve("languages") ?? ["ENGLISH" /* ENGLISH */];
-  };
-  var getSplitImages = async (stateManager) => {
-    return await stateManager.retrieve("split_images") ?? "yes";
-  };
-  var getResolution = async (stateManager) => {
-    return await stateManager.retrieve("image_resolution") ?? "high";
-  };
-  var contentSettings = (stateManager) => {
-    return App.createDUINavigationButton({
-      id: "content_settings",
-      label: "Content Settings",
-      form: App.createDUIForm({
-        sections: async () => [
-          App.createDUISection({
-            isHidden: false,
-            id: "content",
-            rows: async () => {
-              await Promise.all([
-                getLanguages(stateManager),
-                getSplitImages(stateManager),
-                getResolution(stateManager)
-              ]);
-              return await [
-                App.createDUISelect({
-                  id: "languages",
-                  label: "Languages",
-                  options: ["ENGLISH" /* ENGLISH */, "FRENCH" /* FRENCH */, "INDONESIAN" /* INDONESIAN */, "PORTUGUESE_BR" /* PORTUGUESE_BR */, "RUSSIAN" /* RUSSIAN */, "SPANISH" /* SPANISH */, "THAI" /* THAI */, "VIETNAMESE" /* VIETNAMESE */],
-                  labelResolver: async (option) => {
-                    switch (option) {
-                      case "ENGLISH" /* ENGLISH */:
-                        return "English";
-                      case "SPANISH" /* SPANISH */:
-                        return "Espa\xF1ol";
-                      case "FRENCH" /* FRENCH */:
-                        return "Fran\xE7ais";
-                      case "INDONESIAN" /* INDONESIAN */:
-                        return "Bahasa (IND)";
-                      case "PORTUGUESE_BR" /* PORTUGUESE_BR */:
-                        return "Portug\xFBes (BR)";
-                      case "RUSSIAN" /* RUSSIAN */:
-                        return "\u0420\u0443\u0441\u0441\u043A\u0438\u0439";
-                      case "THAI" /* THAI */:
-                        return "\u0E20\u0E32\u0E29\u0E32\u0E44\u0E17\u0E22";
-                      case "VIETNAMESE" /* VIETNAMESE */:
-                        return "Ti\u1EBFng Vi\u1EC7t";
-                      default:
-                        return "";
-                    }
-                  },
-                  value: App.createDUIBinding({
-                    get: async () => getLanguages(stateManager),
-                    set: async (value) => {
-                      await stateManager.store("languages", value);
-                    }
-                  }),
-                  allowsMultiselect: true
-                }),
-                App.createDUISwitch({
-                  id: "split_images",
-                  label: "Split double pages",
-                  value: App.createDUIBinding({
-                    get: async () => await getSplitImages(stateManager) == "yes",
-                    set: async (value) => {
-                      await stateManager.store("split_images", value ? "yes" : "no");
-                    }
-                  })
-                }),
-                App.createDUISelect({
-                  id: "image_resolution",
-                  label: "Image resolution",
-                  options: ["low", "high", "super_high"],
-                  value: App.createDUIBinding({
-                    get: async () => [await getResolution(stateManager)],
-                    set: async (value) => {
-                      await stateManager.store("image_resolution", value[0]);
-                    }
-                  }),
-                  allowsMultiselect: false,
-                  labelResolver: async (option) => {
-                    switch (option) {
-                      case "low":
-                        return "Low";
-                      case "high":
-                        return "High";
-                      case "super_high":
-                        return "Super High";
-                      default:
-                        return "";
-                    }
-                  }
-                })
-              ];
-            }
-          })
-        ]
+  // src/NHentai/NHentaiParser.ts
+  var parseMangaDetails = (data) => {
+    const artist = getArtist(data);
+    const tags = [];
+    for (const tag of data.tags) {
+      if (tag.type !== "tag") continue;
+      tags.push(App.createTag({ id: tag.name, label: capitalizeTags(tag.name) }));
+    }
+    return App.createSourceManga({
+      id: data.id.toString(),
+      mangaInfo: App.createMangaInfo({
+        titles: Object.values(data.title).filter((title) => title !== null),
+        artist,
+        author: artist,
+        image: `https://t3.nhentai.net/galleries/${data.media_id}/cover.${typeOfImage(data.images.cover)}`,
+        status: "Completed",
+        tags: [App.createTagSection({ id: "tags", label: "Tags", tags })],
+        desc: `Pages: ${data.num_pages} | Favorites: ${data.num_favorites}`
       })
     });
   };
-  function resetSettings(stateManager) {
+  var parseChapters = (data, mangaId) => {
+    return App.createChapter({
+      id: mangaId,
+      chapNum: 1,
+      name: data.title.english,
+      langCode: NHLanguages.getLangCode(getLanguage(data)),
+      time: new Date(data.upload_date * 1e3)
+    });
+  };
+  var parseChapterDetails = (data, mangaId) => {
+    return App.createChapterDetails({
+      id: mangaId,
+      mangaId,
+      pages: data.images.pages.map((image, i) => {
+        const type = typeOfImage(image);
+        return `https://i4.nhentai.net/galleries/${data.media_id}/${i + 1}.${type}`;
+      })
+    });
+  };
+  var parseSearch = (data) => {
+    const tiles = [];
+    const collectedIds = [];
+    if (!data?.result) {
+      console.log(JSON.stringify(data));
+      throw new Error("JSON NO RESULT ERROR!\n\nYou've like set too many additional arguments in this source's settings, remove some to see results!\nSo search with tags you need to use arguments like shown in the sourc's settings!");
+    }
+    for (const gallery of data.result) {
+      if (collectedIds.includes(gallery.id.toString())) continue;
+      tiles.push(App.createPartialSourceManga({
+        image: `https://t3.nhentai.net/galleries/${gallery.media_id}/cover.${typeOfImage(gallery.images.cover)}`,
+        title: gallery.title.pretty,
+        mangaId: gallery.id.toString(),
+        subtitle: NHLanguages.getName(getLanguage(gallery)).substring(0, 3) + " | Pgs: " + gallery.num_pages
+      }));
+      collectedIds.push(gallery.id.toString());
+    }
+    return tiles;
+  };
+  function capitalizeTags(str) {
+    return str.split(" ").map((word) => {
+      return word.charAt(0).toUpperCase() + word.slice(1);
+    }).join(" ");
+  }
+  var typeMap = { "j": "jpg", "p": "png", "g": "gif", "w": "webp" };
+  var typeOfImage = (image) => {
+    return typeMap[image.t] ?? "";
+  };
+  var getArtist = (gallery) => {
+    const tags = gallery.tags;
+    for (const tag of tags) {
+      if (tag.type === "artist") {
+        return tag.name;
+      }
+    }
+    return "";
+  };
+  var getLanguage = (gallery) => {
+    const tags = gallery.tags;
+    for (const tag of tags) {
+      if (tag.type === "language" && tag.name !== "translated") {
+        return tag.name;
+      }
+    }
+    return "";
+  };
+
+  // src/NHentai/NHentaiSettings.ts
+  var getLanguages = async (stateManager) => {
+    return await stateManager.retrieve("languages") ?? NHLanguages.getDefault();
+  };
+  var getSortOrders = async (stateManager) => {
+    return await stateManager.retrieve("sort_order") ?? NHSortOrders.getDefault();
+  };
+  var getExtraArgs = async (stateManager) => {
+    return await stateManager.retrieve("extra_args") ?? "-lolicon -shotacon -yaoi";
+  };
+  var settings = (stateManager) => {
+    return App.createDUINavigationButton({
+      id: "settings",
+      label: "Content Settings",
+      form: App.createDUIForm({
+        sections: () => {
+          return Promise.resolve([
+            App.createDUISection({
+              id: "content",
+              footer: 'Tags with a space or "-" in them need to be double quoted. \nExample: "love-saber" and -"big breasts"\nTo exclude tags, add a "-" in the front. To include, add a "+".',
+              rows: async () => {
+                await Promise.all([
+                  getLanguages(stateManager),
+                  getSortOrders(stateManager),
+                  getExtraArgs(stateManager)
+                ]);
+                return await [
+                  App.createDUISelect({
+                    id: "languages",
+                    label: "Languages",
+                    options: NHLanguages.getNHCodeList(),
+                    labelResolver: async (option) => NHLanguages.getName(option),
+                    value: App.createDUIBinding({
+                      get: () => getLanguages(stateManager),
+                      set: async (newValue) => await stateManager.store("languages", newValue)
+                    }),
+                    allowsMultiselect: false
+                  }),
+                  App.createDUISelect({
+                    id: "sort_order",
+                    label: "Default search sort order",
+                    options: NHSortOrders.getNHCodeList(),
+                    labelResolver: async (option) => NHSortOrders.getName(option),
+                    value: App.createDUIBinding({
+                      get: () => getSortOrders(stateManager),
+                      set: async (newValue) => await stateManager.store("sort_order", newValue)
+                    }),
+                    allowsMultiselect: false
+                  }),
+                  App.createDUIInputField({
+                    id: "extra_args",
+                    label: "Additional arguments",
+                    value: App.createDUIBinding({
+                      get: () => getExtraArgs(stateManager),
+                      set: async (newValue) => {
+                        await stateManager.store(
+                          "extra_args",
+                          newValue.replaceAll(/‘|’/g, "'").replaceAll(/“|”/g, '"')
+                        );
+                      }
+                    })
+                  })
+                ];
+              },
+              isHidden: false
+            })
+          ]);
+        }
+      })
+    });
+  };
+  var resetSettings = (stateManager) => {
     return App.createDUIButton({
       id: "reset",
       label: "Reset to Default",
       onTap: async () => {
-        await stateManager.store("languages", ["ENGLISH" /* ENGLISH */]), await stateManager.store("split_images", "yes"), await stateManager.store("image_resolution", "high");
+        await Promise.all([
+          stateManager.store("languages", null),
+          stateManager.store("sort_order", null),
+          stateManager.store("extra_args", null)
+        ]);
       }
     });
-  }
-
-  // node_modules/stemmer/index.js
-  var step2list = {
-    ational: "ate",
-    tional: "tion",
-    enci: "ence",
-    anci: "ance",
-    izer: "ize",
-    bli: "ble",
-    alli: "al",
-    entli: "ent",
-    eli: "e",
-    ousli: "ous",
-    ization: "ize",
-    ation: "ate",
-    ator: "ate",
-    alism: "al",
-    iveness: "ive",
-    fulness: "ful",
-    ousness: "ous",
-    aliti: "al",
-    iviti: "ive",
-    biliti: "ble",
-    logi: "log"
-  };
-  var step3list = {
-    icate: "ic",
-    ative: "",
-    alize: "al",
-    iciti: "ic",
-    ical: "ic",
-    ful: "",
-    ness: ""
-  };
-  var consonant = "[^aeiou]";
-  var vowel = "[aeiouy]";
-  var consonants = "(" + consonant + "[^aeiouy]*)";
-  var vowels = "(" + vowel + "[aeiou]*)";
-  var gt0 = new RegExp("^" + consonants + "?" + vowels + consonants);
-  var eq1 = new RegExp(
-    "^" + consonants + "?" + vowels + consonants + vowels + "?$"
-  );
-  var gt1 = new RegExp("^" + consonants + "?(" + vowels + consonants + "){2,}");
-  var vowelInStem = new RegExp("^" + consonants + "?" + vowel);
-  var consonantLike = new RegExp("^" + consonants + vowel + "[^aeiouwxy]$");
-  var sfxLl = /ll$/;
-  var sfxE = /^(.+?)e$/;
-  var sfxY = /^(.+?)y$/;
-  var sfxIon = /^(.+?(s|t))(ion)$/;
-  var sfxEdOrIng = /^(.+?)(ed|ing)$/;
-  var sfxAtOrBlOrIz = /(at|bl|iz)$/;
-  var sfxEED = /^(.+?)eed$/;
-  var sfxS = /^.+?[^s]s$/;
-  var sfxSsesOrIes = /^.+?(ss|i)es$/;
-  var sfxMultiConsonantLike = /([^aeiouylsz])\1$/;
-  var step2 = /^(.+?)(ational|tional|enci|anci|izer|bli|alli|entli|eli|ousli|ization|ation|ator|alism|iveness|fulness|ousness|aliti|iviti|biliti|logi)$/;
-  var step3 = /^(.+?)(icate|ative|alize|iciti|ical|ful|ness)$/;
-  var step4 = /^(.+?)(al|ance|ence|er|ic|able|ible|ant|ement|ment|ent|ou|ism|ate|iti|ous|ive|ize)$/;
-  function stemmer(value) {
-    let result = String(value).toLowerCase();
-    if (result.length < 3) {
-      return result;
-    }
-    let firstCharacterWasLowerCaseY = false;
-    if (result.codePointAt(0) === 121) {
-      firstCharacterWasLowerCaseY = true;
-      result = "Y" + result.slice(1);
-    }
-    if (sfxSsesOrIes.test(result)) {
-      result = result.slice(0, -2);
-    } else if (sfxS.test(result)) {
-      result = result.slice(0, -1);
-    }
-    let match;
-    if (match = sfxEED.exec(result)) {
-      if (gt0.test(match[1])) {
-        result = result.slice(0, -1);
-      }
-    } else if ((match = sfxEdOrIng.exec(result)) && vowelInStem.test(match[1])) {
-      result = match[1];
-      if (sfxAtOrBlOrIz.test(result)) {
-        result += "e";
-      } else if (sfxMultiConsonantLike.test(result)) {
-        result = result.slice(0, -1);
-      } else if (consonantLike.test(result)) {
-        result += "e";
-      }
-    }
-    if ((match = sfxY.exec(result)) && vowelInStem.test(match[1])) {
-      result = match[1] + "i";
-    }
-    if ((match = step2.exec(result)) && gt0.test(match[1])) {
-      result = match[1] + step2list[match[2]];
-    }
-    if ((match = step3.exec(result)) && gt0.test(match[1])) {
-      result = match[1] + step3list[match[2]];
-    }
-    if (match = step4.exec(result)) {
-      if (gt1.test(match[1])) {
-        result = match[1];
-      }
-    } else if ((match = sfxIon.exec(result)) && gt1.test(match[1])) {
-      result = match[1];
-    }
-    if ((match = sfxE.exec(result)) && (gt1.test(match[1]) || eq1.test(match[1]) && !consonantLike.test(match[1]))) {
-      result = match[1];
-    }
-    if (sfxLl.test(result) && gt1.test(result)) {
-      result = result.slice(0, -1);
-    }
-    if (firstCharacterWasLowerCaseY) {
-      result = "y" + result.slice(1);
-    }
-    return result;
-  }
-
-  // node_modules/fastest-levenshtein/esm/mod.js
-  var peq = new Uint32Array(65536);
-  var myers_32 = (a, b) => {
-    const n = a.length;
-    const m = b.length;
-    const lst = 1 << n - 1;
-    let pv = -1;
-    let mv = 0;
-    let sc = n;
-    let i = n;
-    while (i--) {
-      peq[a.charCodeAt(i)] |= 1 << i;
-    }
-    for (i = 0; i < m; i++) {
-      let eq = peq[b.charCodeAt(i)];
-      const xv = eq | mv;
-      eq |= (eq & pv) + pv ^ pv;
-      mv |= ~(eq | pv);
-      pv &= eq;
-      if (mv & lst) {
-        sc++;
-      }
-      if (pv & lst) {
-        sc--;
-      }
-      mv = mv << 1 | 1;
-      pv = pv << 1 | ~(xv | mv);
-      mv &= xv;
-    }
-    i = n;
-    while (i--) {
-      peq[a.charCodeAt(i)] = 0;
-    }
-    return sc;
-  };
-  var myers_x = (b, a) => {
-    const n = a.length;
-    const m = b.length;
-    const mhc = [];
-    const phc = [];
-    const hsize = Math.ceil(n / 32);
-    const vsize = Math.ceil(m / 32);
-    for (let i = 0; i < hsize; i++) {
-      phc[i] = -1;
-      mhc[i] = 0;
-    }
-    let j = 0;
-    for (; j < vsize - 1; j++) {
-      let mv2 = 0;
-      let pv2 = -1;
-      const start2 = j * 32;
-      const vlen2 = Math.min(32, m) + start2;
-      for (let k = start2; k < vlen2; k++) {
-        peq[b.charCodeAt(k)] |= 1 << k;
-      }
-      for (let i = 0; i < n; i++) {
-        const eq = peq[a.charCodeAt(i)];
-        const pb = phc[i / 32 | 0] >>> i & 1;
-        const mb = mhc[i / 32 | 0] >>> i & 1;
-        const xv = eq | mv2;
-        const xh = ((eq | mb) & pv2) + pv2 ^ pv2 | eq | mb;
-        let ph = mv2 | ~(xh | pv2);
-        let mh = pv2 & xh;
-        if (ph >>> 31 ^ pb) {
-          phc[i / 32 | 0] ^= 1 << i;
-        }
-        if (mh >>> 31 ^ mb) {
-          mhc[i / 32 | 0] ^= 1 << i;
-        }
-        ph = ph << 1 | pb;
-        mh = mh << 1 | mb;
-        pv2 = mh | ~(xv | ph);
-        mv2 = ph & xv;
-      }
-      for (let k = start2; k < vlen2; k++) {
-        peq[b.charCodeAt(k)] = 0;
-      }
-    }
-    let mv = 0;
-    let pv = -1;
-    const start = j * 32;
-    const vlen = Math.min(32, m - start) + start;
-    for (let k = start; k < vlen; k++) {
-      peq[b.charCodeAt(k)] |= 1 << k;
-    }
-    let score = m;
-    for (let i = 0; i < n; i++) {
-      const eq = peq[a.charCodeAt(i)];
-      const pb = phc[i / 32 | 0] >>> i & 1;
-      const mb = mhc[i / 32 | 0] >>> i & 1;
-      const xv = eq | mv;
-      const xh = ((eq | mb) & pv) + pv ^ pv | eq | mb;
-      let ph = mv | ~(xh | pv);
-      let mh = pv & xh;
-      score += ph >>> m - 1 & 1;
-      score -= mh >>> m - 1 & 1;
-      if (ph >>> 31 ^ pb) {
-        phc[i / 32 | 0] ^= 1 << i;
-      }
-      if (mh >>> 31 ^ mb) {
-        mhc[i / 32 | 0] ^= 1 << i;
-      }
-      ph = ph << 1 | pb;
-      mh = mh << 1 | mb;
-      pv = mh | ~(xv | ph);
-      mv = ph & xv;
-    }
-    for (let k = start; k < vlen; k++) {
-      peq[b.charCodeAt(k)] = 0;
-    }
-    return score;
-  };
-  var distance = (a, b) => {
-    if (a.length < b.length) {
-      const tmp = b;
-      b = a;
-      a = tmp;
-    }
-    if (b.length === 0) {
-      return a.length;
-    }
-    if (a.length <= 32) {
-      return myers_32(a, b);
-    }
-    return myers_x(a, b);
   };
 
-  // src/MangaPlus/RelevanceScore.ts
-  var relevanceScore = (title, queryTitle) => {
-    const titleWords = tokenize(title);
-    const queryWords = tokenize(queryTitle);
-    const titleStripped = titleWords.join("");
-    const queryStripped = queryWords.join("");
-    if (titleStripped === queryStripped) {
-      return 100;
+  // src/NHentai/tags.json
+  var popularTags = [
+    {
+      id: "big-breasts",
+      label: "Big Breasts"
+    },
+    {
+      id: "solo-female",
+      label: "Solo Female"
+    },
+    {
+      id: "sole-male",
+      label: "Solo Male"
+    },
+    {
+      id: "anal",
+      label: "Anal"
+    },
+    {
+      id: "stockings",
+      label: "Stockings"
+    },
+    {
+      id: "schoolgirl-uniform",
+      label: "Schoolgirl Uniform"
+    },
+    {
+      id: "nakadashi",
+      label: "Nakadashi"
+    },
+    {
+      id: "blowjob",
+      label: "Blowjob"
+    },
+    {
+      id: "bondage",
+      label: "Bondage"
+    },
+    {
+      id: "mosaic-censorship",
+      label: "Mosaic Censorship"
+    },
+    {
+      id: "ahegao",
+      label: "Ahegao"
+    },
+    {
+      id: "males-only",
+      label: "Males Only"
+    },
+    {
+      id: "dark-skin",
+      label: "Dark Skin"
+    },
+    {
+      id: "double-penetration",
+      label: "Double Penetration"
+    },
+    {
+      id: "tankoubon",
+      label: "Tankoubon"
+    },
+    {
+      id: "futanari",
+      label: "Futanari"
+    },
+    {
+      id: "defloration",
+      label: "Defloration"
+    },
+    {
+      id: "multi-work-series",
+      label: "Multi Work Series"
+    },
+    {
+      id: "sex-toys",
+      label: "Sex Toys"
+    },
+    {
+      id: "swimsuit",
+      label: "Swimsuit"
+    },
+    {
+      id: "ffm-threesome",
+      label: "FFM Threesome"
+    },
+    {
+      id: "full-censorship",
+      label: "Full Censorship"
+    },
+    {
+      id: "femdom",
+      label: "Femdom"
+    },
+    {
+      id: "dilf",
+      label: "DILF"
+    },
+    {
+      id: "twintails",
+      label: "Twintails"
+    },
+    {
+      id: "pantyhose",
+      label: "Pantyhose"
+    },
+    {
+      id: "sister",
+      label: "Sister"
+    },
+    {
+      id: "crossdressing",
+      label: "Crossdressing"
+    },
+    {
+      id: "tentacles",
+      label: "Tentacles"
+    },
+    {
+      id: "mind-break",
+      label: "Mind Break"
+    },
+    {
+      id: "bikini",
+      label: "Bikini"
+    },
+    {
+      id: "schoolboy-uniform",
+      label: "Schoolboy Uniform"
+    },
+    {
+      id: "story-arc",
+      label: "Story Arc"
+    },
+    {
+      id: "tomgirl",
+      label: "Tomgirl"
+    },
+    {
+      id: "big-ass",
+      label: "Big Sss"
+    },
+    {
+      id: "sweating",
+      label: "Sweating"
+    },
+    {
+      id: "mmf-threesome",
+      label: "MMF Threesome"
+    },
+    {
+      id: "teacher",
+      label: "Teacher"
+    },
+    {
+      id: "exhibitionism",
+      label: "Exhibitionism"
+    },
+    {
+      id: "uncensored",
+      label: "Uncensored"
+    },
+    {
+      id: "females-only",
+      label: "Females Only"
+    },
+    {
+      id: "lingerie",
+      label: "Lingerie"
+    },
+    {
+      id: "unusual-pupils",
+      label: "Unusual Pupils"
+    },
+    {
+      id: "footjob",
+      label: "Footjob"
+    },
+    {
+      id: "mother",
+      label: "Mother"
+    },
+    {
+      id: "huge-breasts",
+      label: "Huge-breasts"
+    },
+    {
+      id: "gender-bender",
+      label: "Gender Bender"
+    },
+    {
+      id: "catgirl",
+      label: "Catgirl"
+    },
+    {
+      id: "demon-girl",
+      label: "Demon Girl"
+    },
+    {
+      id: "kimono",
+      label: "Kimono"
+    },
+    {
+      id: "prostitution",
+      label: "Prostitution"
+    },
+    {
+      id: "stomach-deformation",
+      label: "Stomach Deformation"
+    },
+    {
+      id: "horns",
+      label: "Horns"
+    },
+    {
+      id: "webtoon",
+      label: "Webtoon"
+    },
+    {
+      id: "monster-girl",
+      label: "Monster Girl"
+    },
+    {
+      id: "latex",
+      label: "Latex"
+    },
+    {
+      id: "fox-girl",
+      label: "Fox Girl"
+    },
+    {
+      id: "yandere",
+      label: "Yandere"
+    },
+    {
+      id: "milking",
+      label: "Milking"
     }
-    const titlePhrase = titleWords.join(" ");
-    const queryPhrase = queryWords.join(" ");
-    const phraseAtStartRegex = new RegExp(`^\\b${queryPhrase}\\b`, "i");
-    if (phraseAtStartRegex.test(titlePhrase)) {
-      return 100;
-    }
-    const phraseAnywhereRegex = new RegExp(`\\b${queryPhrase}\\b`, "i");
-    if (phraseAnywhereRegex.test(titlePhrase)) {
-      return 95;
-    }
-    const adjacentSequencePosition = getAdjacentSequencePosition(titleWords, queryWords);
-    if (adjacentSequencePosition === 0) {
-      return 90;
-    } else if (adjacentSequencePosition > 0) {
-      return 85;
-    }
-    if (wordsAppearInOrder(titleWords, queryWords)) {
-      return 80;
-    }
-    if (allWordsPresent(titleWords, queryWords)) {
-      return 75;
-    }
-    let totalSimilarity = 0;
-    for (const queryWord of queryWords) {
-      let maxSimilarity = 0;
-      for (const titleWord of titleWords) {
-        const similarity = wordSimilarity(queryWord, titleWord);
-        if (similarity > maxSimilarity) {
-          maxSimilarity = similarity;
-        }
-      }
-      totalSimilarity += maxSimilarity;
-    }
-    const averageSimilarity = totalSimilarity / queryWords.length;
-    const finalScore = averageSimilarity * 70;
-    return Math.max(0, Math.min(70, finalScore));
-  };
-  var wordSimilarity = (word1, word2) => {
-    const stemmedWord1 = stemmer(word1);
-    const stemmedWord2 = stemmer(word2);
-    if (stemmedWord1 === stemmedWord2) {
-      return 1;
-    }
-    const maxLen = Math.max(stemmedWord1.length, stemmedWord2.length);
-    const distance2 = distance(stemmedWord1, stemmedWord2);
-    const similarity = (maxLen - distance2) / maxLen;
-    if (similarity >= 0.6) {
-      return similarity;
-    }
-    return 0;
-  };
-  var tokenize = (text) => {
-    return text.toLowerCase().replace(/[\u2019']/g, "").replace(/[^\w\s]/g, "").split(/\s+/).filter((word) => word.length > 0);
-  };
-  var allWordsPresent = (titleWords, queryWords) => {
-    for (const queryWord of queryWords) {
-      let found = false;
-      for (const titleWord of titleWords) {
-        if (wordSimilarity(queryWord, titleWord) >= 0.7) {
-          found = true;
-          break;
-        }
-      }
-      if (!found) {
-        return false;
-      }
-    }
-    return true;
-  };
-  var wordsAppearInOrder = (titleWords, queryWords) => {
-    let titleIndex = 0;
-    for (let i = 0; i < queryWords.length; i++) {
-      const queryWord = queryWords[i];
-      while (titleIndex < titleWords.length) {
-        if (wordSimilarity(queryWord, titleWords[titleIndex]) >= 0.7) {
-          titleIndex++;
-          break;
-        }
-        titleIndex++;
-      }
-      if (titleIndex === titleWords.length && i < queryWords.length - 1) {
-        return false;
-      }
-    }
-    return true;
-  };
-  var getAdjacentSequencePosition = (titleWords, queryWords) => {
-    for (let i = 0; i <= titleWords.length - queryWords.length; i++) {
-      let match = true;
-      for (let j = 0; j < queryWords.length; j++) {
-        if (wordSimilarity(queryWords[j], titleWords[i + j]) < 0.7) {
-          match = false;
-          break;
-        }
-      }
-      if (match) {
-        return i;
-      }
-    }
-    return -1;
-  };
+  ];
 
-  // src/MangaPlus/MangaPlus.ts
-  var BASE_URL = "https://mangaplus.shueisha.co.jp";
-  var API_URL = "https://jumpg-webapi.tokyo-cdn.com/api";
-  var langCode = "ENGLISH" /* ENGLISH */;
-  var MangaPlusInfo = {
-    version: "2.0.4",
-    name: "MangaPlus",
+  // src/NHentai/NHentai.ts
+  var NHENTAI_URL = "https://nhentai.net";
+  var NHentaiInfo = {
+    version: "4.0.9",
+    name: "nhentai",
     icon: "icon.png",
-    author: "Rinto-kun",
-    authorWebsite: "https://github.com/Rinto-kun",
-    description: "Extension that pulls manga from Manga+ by Shueisha",
-    contentRating: import_types.ContentRating.EVERYONE,
-    websiteBaseURL: BASE_URL,
-    sourceTags: [],
-    intents: import_types.SourceIntents.MANGA_CHAPTERS | import_types.SourceIntents.HOMEPAGE_SECTIONS | import_types.SourceIntents.CLOUDFLARE_BYPASS_REQUIRED | import_types.SourceIntents.SETTINGS_UI
+    author: "NotMarek & Netsky",
+    authorWebsite: "https://github.com/TheNetsky",
+    description: "Extension which pulls content from nHentai.",
+    contentRating: import_types.ContentRating.ADULT,
+    websiteBaseURL: NHENTAI_URL,
+    intents: import_types.SourceIntents.MANGA_CHAPTERS | import_types.SourceIntents.HOMEPAGE_SECTIONS | import_types.SourceIntents.CLOUDFLARE_BYPASS_REQUIRED | import_types.SourceIntents.SETTINGS_UI,
+    sourceTags: [
+      {
+        text: "18+",
+        type: import_types.BadgeColor.YELLOW
+      }
+    ]
   };
-  var MangaPlus = class {
+  var NHentai = class _NHentai {
     constructor() {
-      this.stateManager = App.createSourceStateManager();
       this.requestManager = App.createRequestManager({
-        requestsPerSecond: 10,
-        requestTimeout: 2e4,
+        requestsPerSecond: 3,
+        requestTimeout: 15e3,
         interceptor: {
           interceptRequest: async (request) => {
             request.headers = {
               ...request.headers ?? {},
-              "Referer": `${BASE_URL}/`,
-              "user-agent": await this.requestManager.getDefaultUserAgent()
+              ...{
+                "referer": `${NHENTAI_URL}/`,
+                "user-agent": await this.requestManager.getDefaultUserAgent()
+              }
             };
-            if (request.url.startsWith("imageMangaId=")) {
-              const mangaId = request.url.replace("imageMangaId=", "");
-              request.url = await this.getThumbnailUrl(mangaId);
-            }
             return request;
           },
           interceptResponse: async (response) => {
-            if (!response.request.url.includes("encryptionKey") && response.headers["Content-Type"] !== "image/jpeg") {
-              return response;
-            }
-            if (response.request.url.includes("title_thumbnail_portrait_list")) {
-              return response;
-            }
-            const encryptionKey = response.request.url.substring(response.request.url.lastIndexOf("#") + 1) ?? "";
-            response.rawData = App.createRawData(this.decodeXoRCipher(App.createByteArray(response.rawData ?? new Uint8Array()), encryptionKey));
             return response;
           }
         }
       });
+      this.stateManager = App.createSourceStateManager();
     }
+    // Sourrce Settings
     async getSourceMenu() {
-      return App.createDUISection(
-        {
-          id: "main",
-          header: "Source Settings",
-          rows: async () => {
-            return [
-              contentSettings(this.stateManager),
-              resetSettings(this.stateManager)
-            ];
-          },
-          isHidden: false
-        }
-      );
+      return Promise.resolve(App.createDUISection({
+        id: "main",
+        header: "Source Settings",
+        rows: () => Promise.resolve([
+          settings(this.stateManager),
+          resetSettings(this.stateManager)
+        ]),
+        isHidden: false
+      }));
     }
     getMangaShareUrl(mangaId) {
-      return `${BASE_URL}/titles/${mangaId}`;
+      return `${NHENTAI_URL}/g/${mangaId}`;
     }
     async getMangaDetails(mangaId) {
       const request = App.createRequest({
-        url: `${API_URL}/title_detailV3?title_id=${mangaId}&format=json`,
+        url: `${NHENTAI_URL}/api/gallery/${mangaId}`,
         method: "GET"
       });
       const response = await this.requestManager.schedule(request, 1);
-      const result = TitleDetailView.fromJson(response.data);
-      return result.toSourceManga();
-    }
-    async getThumbnailUrl(mangaId) {
-      const request = App.createRequest({
-        url: `${API_URL}/title_detailV3?title_id=${mangaId}&format=json`,
-        method: "GET"
-      });
-      const response = await this.requestManager.schedule(request, 1);
-      const result = TitleDetailView.fromJson(response.data);
-      return result.title?.portraitImageUrl ?? "";
+      this.CloudFlareError(response.status);
+      const jsonData = this.parseJson(response);
+      return parseMangaDetails(jsonData);
     }
     async getChapters(mangaId) {
       const request = App.createRequest({
-        url: `${API_URL}/title_detailV3?title_id=${mangaId}&format=json`,
+        url: `${NHENTAI_URL}/api/gallery/${mangaId}`,
         method: "GET"
       });
       const response = await this.requestManager.schedule(request, 1);
-      const result = TitleDetailView.fromJson(response.data);
-      return [...result.firstChapterList ?? [], ...result.lastChapterList ?? []].reverse().filter((chapter) => !chapter.isExpired).map((chapter) => chapter.toSChapter());
+      this.CloudFlareError(response.status);
+      const jsonData = this.parseJson(response);
+      return [parseChapters(jsonData, mangaId)];
     }
-    async getChapterDetails(mangaId, chapterId) {
+    async getChapterDetails(mangaId) {
       const request = App.createRequest({
-        url: `${API_URL}/manga_viewer?chapter_id=${chapterId}&split=${await this.stateManager.retrieve("split_images") ?? "no"}&img_quality=${await this.stateManager.retrieve("image_resolution") ?? "high"}&format=json`,
+        url: `${NHENTAI_URL}/api/gallery/${mangaId}`,
         method: "GET"
       });
       const response = await this.requestManager.schedule(request, 1);
-      const result = JSON.parse(response.data);
-      if (result.success === void 0) {
-        throw new Error(result.error?.langPopup("ENGLISH" /* ENGLISH */)?.body ?? "Unknown error");
-      }
-      const pages = result.success.mangaViewer?.pages.map((page) => page.mangaPage).filter((page) => page).map((page) => page?.encryptionKey ? `${page?.imageUrl}#${page?.encryptionKey}` : "");
-      return App.createChapterDetails({
-        id: chapterId,
-        mangaId,
-        pages: pages ?? []
-      });
+      this.CloudFlareError(response.status);
+      const jsonData = this.parseJson(response);
+      return parseChapterDetails(jsonData, mangaId);
     }
-    async getFeaturedTitles() {
-      const request = App.createRequest({
-        url: `${API_URL}/featuredV2?lang=eng&clang=eng&format=json`,
-        method: "GET"
-      });
-      const response = await this.requestManager.schedule(request, 1);
-      const result = JSON.parse(response.data);
-      if (result.success === void 0) {
-        throw new Error(result.error?.langPopup("ENGLISH" /* ENGLISH */)?.body ?? "Unknown error");
+    async getSearchTags() {
+      const arrayTags = [];
+      for (const tag of popularTags) {
+        const label = tag.label;
+        const id = tag.id;
+        arrayTags.push({ id, label });
       }
-      const languages = await getLanguages(this.stateManager);
-      const results = result.success?.featuredTitlesViewV2?.contents?.find((x) => x.titleList && x.titleList.listName == "WEEKLY SHONEN JUMP")?.titleList.featuredTitles.filter((title) => languages.includes(title.language ?? "ENGLISH" /* ENGLISH */));
-      const titles = [];
-      const collectedIds = [];
-      for (const item of results ?? []) {
-        const mangaId = item.titleId.toString();
-        const title = item.name;
-        const author = item.author;
-        const image = item.portraitImageUrl;
-        if (!mangaId || !title || collectedIds.includes(mangaId)) continue;
-        titles.push(App.createPartialSourceManga({
-          mangaId,
-          title,
-          subtitle: author,
-          image
-        }));
-      }
-      return titles;
-    }
-    async getPopularTitles() {
-      const request = App.createRequest({
-        url: `${API_URL}/title_list/ranking?format=json`,
-        method: "GET"
-      });
-      const response = await this.requestManager.schedule(request, 1);
-      const result = JSON.parse(response.data);
-      if (result.success === void 0) {
-        throw new Error(result.error?.langPopup("ENGLISH" /* ENGLISH */)?.body ?? "Unknown error");
-      }
-      const languages = await getLanguages(this.stateManager);
-      const results = result.success?.titleRankingView?.titles.filter((title) => languages.includes(title.language ?? "ENGLISH" /* ENGLISH */));
-      const titles = [];
-      const collectedIds = [];
-      for (const item of results ?? []) {
-        const mangaId = item.titleId.toString();
-        const title = item.name;
-        const author = item.author;
-        const image = item.portraitImageUrl;
-        if (!mangaId || !title || collectedIds.includes(mangaId)) continue;
-        titles.push(App.createPartialSourceManga({
-          mangaId,
-          title,
-          subtitle: author,
-          image
-        }));
-      }
-      return titles;
-    }
-    async getLatestUpdates() {
-      function latestUpdatesRequest() {
-        return App.createRequest({
-          url: `${API_URL}/web/web_homeV4?lang=eng&format=json`,
-          method: "GET"
-        });
-      }
-      const request = latestUpdatesRequest();
-      const response = await this.requestManager.schedule(request, 1);
-      const result = JSON.parse(response.data);
-      if (result.success === void 0) {
-        throw new Error(result.error?.langPopup(langCode)?.body ?? "Unknown error");
-      }
-      const languages = await getLanguages(this.stateManager);
-      const results = result.success.webHomeViewV4?.groups.flatMap((ex) => ex.titleGroups).flatMap((ex) => ex.titles).map((title) => title.title).filter((title) => languages.includes(title.language ?? "ENGLISH" /* ENGLISH */));
-      const titles = [];
-      const collectedIds = [];
-      for (const item of results ?? []) {
-        const mangaId = item.titleId.toString();
-        const title = item.name;
-        const author = item.author;
-        const image = item.portraitImageUrl;
-        if (!mangaId || !title || collectedIds.includes(mangaId)) continue;
-        titles.push(App.createPartialSourceManga({
-          mangaId,
-          title,
-          subtitle: author,
-          image
-        }));
-      }
-      return titles;
-    }
-    async getHomePageSections(sectionCallback) {
-      const featuredSection = App.createHomeSection({
-        id: "featured",
-        title: "Deatured",
-        containsMoreItems: true,
-        type: import_types.HomeSectionType.featured,
-        items: await this.getFeaturedTitles()
-      });
-      sectionCallback(featuredSection);
-      const popularSection = App.createHomeSection({
-        id: "popular",
-        title: "Popular",
-        containsMoreItems: true,
-        type: import_types.HomeSectionType.singleRowNormal,
-        items: await this.getPopularTitles()
-      });
-      sectionCallback(popularSection);
-      const latestUpdatesSection = App.createHomeSection({
-        id: "latest_updates",
-        title: "Latest Updates",
-        containsMoreItems: true,
-        type: import_types.HomeSectionType.singleRowNormal,
-        items: await this.getLatestUpdates()
-      });
-      sectionCallback(latestUpdatesSection);
-    }
-    async getViewMoreItems(homepageSectionId, metadata) {
-      let items = [];
-      switch (homepageSectionId) {
-        case "featured":
-          items = await this.getFeaturedTitles();
-          break;
-        case "popular":
-          items = await this.getPopularTitles();
-          break;
-        case "latest_updates":
-          items = await this.getLatestUpdates();
-          break;
-        default:
-          throw new Error(`Invalid homeSectionId | ${homepageSectionId}`);
-      }
-      return App.createPagedResults({
-        results: items,
-        metadata
-      });
+      const tagSections = [App.createTagSection({ id: "0", label: "Tags", tags: arrayTags.map((x) => App.createTag(x)) })];
+      return tagSections;
     }
     async getSearchResults(query, metadata) {
+      const page = metadata?.page ?? 1;
       const title = query.title ?? "";
-      const request = App.createRequest(
-        {
-          url: `${API_URL}/title_list/allV2?format=JSON&${title ? "filter=" + encodeURI(title) + "&" : ""}format=json`,
+      if (metadata?.stopSearch ?? false) {
+        return App.createPagedResults({
+          results: [],
+          metadata: {
+            stopSearch: true
+          }
+        });
+      }
+      if (/^\d+$/.test(title)) {
+        const request = App.createRequest({
+          url: `${NHENTAI_URL}/api/gallery/${title}`,
           method: "GET"
+        });
+        const response = await this.requestManager.schedule(request, 1);
+        this.CloudFlareError(response.status);
+        const jsonData = this.parseJson(response);
+        return App.createPagedResults({
+          results: parseSearch({ result: [jsonData], num_pages: 1, per_page: 1 }),
+          metadata: {
+            page: page + 1,
+            stopSearch: true
+          }
+        });
+      } else {
+        const q = encodeURIComponent(`${title} ${query?.includedTags?.map((x) => ` +${x.id}`)} `) + await this.generateQuery();
+        const request = App.createRequest({
+          url: `${NHENTAI_URL}/api/galleries/search?query=${q}&page=${page}&sort=${await this.sortOrder(this.stateManager)}`,
+          method: "GET"
+        });
+        const response = await this.requestManager.schedule(request, 1);
+        this.CloudFlareError(response.status);
+        const jsonData = this.parseJson(response);
+        return App.createPagedResults({
+          results: parseSearch(jsonData),
+          metadata: {
+            page: page + 1
+          }
+        });
+      }
+    }
+    async getHomePageSections(sectionCallback) {
+      const sections = [
+        {
+          request: App.createRequest({
+            url: `${NHENTAI_URL}/api/galleries/search?query=${await this.generateQuery()}&sort=date`,
+            method: "GET"
+          }),
+          sectionID: App.createHomeSection({
+            id: "date",
+            title: "New Uploads",
+            containsMoreItems: true,
+            type: import_types.HomeSectionType.singleRowNormal
+          })
+        },
+        {
+          request: App.createRequest({
+            url: `${NHENTAI_URL}/api/galleries/search?query=${await this.generateQuery()}&sort=popular-today`,
+            method: "GET"
+          }),
+          sectionID: App.createHomeSection({
+            id: "popular-today",
+            title: "Popular Today",
+            containsMoreItems: true,
+            type: import_types.HomeSectionType.singleRowNormal
+          })
+        },
+        {
+          request: App.createRequest({
+            url: `${NHENTAI_URL}/api/galleries/search?query=${await this.generateQuery()}&sort=popular-week`,
+            method: "GET"
+          }),
+          sectionID: App.createHomeSection({
+            id: "popular-week",
+            title: "Popular Weekly",
+            containsMoreItems: true,
+            type: import_types.HomeSectionType.singleRowNormal
+          })
+        },
+        {
+          request: App.createRequest({
+            url: `${NHENTAI_URL}/api/galleries/search?query=${await this.generateQuery()}&sort=popular-month`,
+            method: "GET"
+          }),
+          sectionID: App.createHomeSection({
+            id: "popular-month",
+            title: "Popular Monthly",
+            containsMoreItems: true,
+            type: import_types.HomeSectionType.singleRowNormal
+          })
+        },
+        {
+          request: App.createRequest({
+            url: `${NHENTAI_URL}/api/galleries/search?query=${await this.generateQuery()}&sort=popular`,
+            method: "GET"
+          }),
+          sectionID: App.createHomeSection({
+            id: "popular",
+            title: "Popular All-Time",
+            containsMoreItems: true,
+            type: import_types.HomeSectionType.singleRowNormal
+          })
         }
-      );
+      ];
+      const promises = [];
+      for (const section of sections) {
+        sectionCallback(section.sectionID);
+        promises.push(
+          this.requestManager.schedule(section.request, 1).then((response) => {
+            this.CloudFlareError(response.status);
+            const jsonData = this.parseJson(response);
+            if (hasNoResults(jsonData)) {
+              return;
+            }
+            section.sectionID.items = parseSearch(jsonData);
+            sectionCallback(section.sectionID);
+          })
+        );
+      }
+      await Promise.all(promises);
+    }
+    async getViewMoreItems(homepageSectionId, metadata) {
+      let page = metadata?.page ?? 1;
+      const request = App.createRequest({
+        url: `${NHENTAI_URL}/api/galleries/search?query=${await this.generateQuery()}&sort=${homepageSectionId}&page=${page}`,
+        method: "GET"
+      });
       const response = await this.requestManager.schedule(request, 1);
-      const result = JSON.parse(response.data);
-      if (result.success === void 0) {
-        throw new Error(result.error?.langPopup("ENGLISH" /* ENGLISH */)?.body ?? "Unknown error");
-      }
-      const ltitle = query.title?.toLowerCase() ?? "";
-      const languages = await getLanguages(this.stateManager);
-      const results = result.success?.allTitlesViewV2?.AllTitlesGroup.flatMap((group) => group.titles).filter((title2) => languages.includes(title2.language ?? "ENGLISH" /* ENGLISH */)).filter((title2) => title2.author?.toLowerCase().includes(ltitle) || title2.name.toLowerCase().includes(ltitle));
-      const titles = [];
-      const collectedIds = [];
-      for (const item of results ?? []) {
-        const mangaId = item.titleId.toString();
-        const title2 = item.name;
-        const author = item.author;
-        const image = item.portraitImageUrl;
-        if (!mangaId || !title2 || collectedIds.includes(mangaId)) continue;
-        const partialManga = App.createPartialSourceManga({
-          mangaId,
-          title: title2,
-          subtitle: author,
-          image
-        });
-        let relevance = 0;
-        if (query?.title) {
-          relevance = relevanceScore(title2, query.title);
-        }
-        titles.push({
-          manga: partialManga,
-          relevance
-        });
-      }
-      titles.sort((a, b) => b.relevance - a.relevance);
+      this.CloudFlareError(response.status);
+      const jsonData = this.parseJson(response);
+      page++;
       return App.createPagedResults({
-        results: titles.map((r) => r.manga)
+        results: parseSearch(jsonData),
+        metadata: {
+          page
+        }
+      });
+    }
+    CloudFlareError(status) {
+      if (status == 503 || status == 403) {
+        throw new Error(`CLOUDFLARE BYPASS ERROR:
+Please go to the homepage of <${_NHentai.name}> and press the cloud icon.`);
+      }
+    }
+    async getCloudflareBypassRequestAsync() {
+      return App.createRequest({
+        url: NHENTAI_URL,
+        method: "GET",
+        headers: {
+          "referer": `${NHENTAI_URL}/`,
+          "user-agent": await this.requestManager.getDefaultUserAgent()
+        }
       });
     }
     // Utility
-    decodeXoRCipher(buffer, encryptionKey) {
-      const key = encryptionKey.match(/../g)?.map((byte) => parseInt(byte, 16)) ?? [];
-      return buffer.map((byte, index) => byte ^ (key[index % key.length] ?? 0));
+    parseJson(response) {
+      try {
+        return typeof response.data == "string" ? JSON.parse(response.data) : response.data;
+      } catch (error) {
+        console.log(JSON.stringify(error));
+        throw new Error("JSON PARSE ERROR!\n\nYou've like set too many filters in this source's settings, remove some to see results!");
+      }
+    }
+    async generateQuery() {
+      const query = await this.language(this.stateManager) + await this.extraArgs(this.stateManager);
+      return encodeURIComponent(query);
+    }
+    async language(stateManager) {
+      const lang = await stateManager.retrieve("languages") ?? "";
+      if (lang == "") {
+        return '""';
+      } else {
+        return `language:${lang}`;
+      }
+    }
+    async sortOrder(stateManager) {
+      const sortOrder = await stateManager.retrieve("sort_order") ?? NHSortOrders.getDefault();
+      return sortOrder;
+    }
+    async extraArgs(stateManager) {
+      const args = await getExtraArgs(stateManager);
+      return ` ${args}`;
     }
   };
-  return __toCommonJS(MangaPlus_exports);
+  return __toCommonJS(NHentai_exports);
 })();
 this.Sources = _Sources; if (typeof exports === 'object' && typeof module !== 'undefined') {module.exports.Sources = this.Sources;}
