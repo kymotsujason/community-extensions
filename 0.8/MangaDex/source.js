@@ -4140,8 +4140,9 @@ var _Sources = (() => {
           })
         );
       }
-      console.log(`@@@@@@@@@@@@@@@@@@@@@@@@@@@ ${getProxyServer(this.stateManager)}`);
-      throw new Error(`@@@@@@@@@@@@@@@@@@@@@@@@@@@ ${getProxyServer(this.stateManager)}`);
+      const test = await getProxyServer(this.stateManager);
+      console.log(`CONSOLE@@@@@@@@@@@@@@@@@@@@@@@@@@@ ${test}`);
+      throw new Error(`ERROR@@@@@@@@@@@@@@@@@@@@@@@@@@@ ${test}`);
       const request = App.createRequest({
         url: `${getProxyServer(this.stateManager)}`,
         method: "HEAD"
