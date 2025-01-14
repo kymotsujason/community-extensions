@@ -3143,7 +3143,9 @@ var _Sources = (() => {
       if (bestSimilarity > 0) {
         let orderMultiplier = 1;
         if (lastMatchedPositionInTitle !== -1 && bestPositionInTitle !== -1) {
-          if (bestPositionInTitle > lastMatchedPositionInTitle) {
+          if (bestPositionInTitle === lastMatchedPositionInTitle + 1) {
+            orderMultiplier += 0.5;
+          } else if (bestPositionInTitle > lastMatchedPositionInTitle) {
             orderMultiplier += 0.1;
           } else {
             orderMultiplier -= 0.1;
