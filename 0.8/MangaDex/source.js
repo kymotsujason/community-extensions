@@ -4052,6 +4052,13 @@ var _Sources = (() => {
       if (dataSaver) {
         pages = chapterDetails.dataSaver.map((x) => `${serverUrl}/data-saver/${chapterDetails.hash}/${x}`);
       } else {
+        const proxyURL = await getProxyServer(this.stateManager);
+        const url = new URLBuilder(proxyURL).addPathComponent("manga").addQueryParameter("chapterDetailsHash", `{${chapterDetails.hash}}`).buildUrl();
+        const request2 = App.createRequest({
+          url,
+          method: "GET"
+        });
+        const response2 = await this.requestManager.schedule(request2, 1);
         pages = chapterDetails.data.map((x) => `${serverUrl}/data/${chapterDetails.hash}/${x}`);
       }
       return App.createChapterDetails({
@@ -4142,8 +4149,8 @@ var _Sources = (() => {
       for (const section of sections) {
         sectionCallback(section.section);
         promises.push(
-          this.requestManager.schedule(section.request, 1).then(async (response2) => {
-            const json = typeof response2.data === "string" ? JSON.parse(response2.data) : response2.data;
+          this.requestManager.schedule(section.request, 1).then(async (response) => {
+            const json = typeof response.data === "string" ? JSON.parse(response.data) : response.data;
             if (json.data === void 0) {
               throw new Error(`Failed to parse json results for section ${section.section.title}`);
             }
@@ -4152,14 +4159,6 @@ var _Sources = (() => {
           })
         );
       }
-      const proxyURL = await getProxyServer(this.stateManager);
-      const url = new URLBuilder(proxyURL).buildUrl();
-      const request = App.createRequest({
-        url,
-        method: "GET"
-      });
-      const response = await this.requestManager.schedule(request, 1);
-      throw new Error(`@@ ${response.status}`);
       await Promise.all(promises);
     }
     async getViewMoreItems(homepageSectionId, metadata) {
