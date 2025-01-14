@@ -2586,6 +2586,11 @@ var _Sources = (() => {
     if (titleStripped === queryStripped) {
       return 100;
     }
+    const titlePhrase = titleWords.join(" ");
+    const queryPhrase = queryWords.join(" ");
+    if (titlePhrase.includes(queryPhrase)) {
+      return 100;
+    }
     const distance2 = distance(titleStripped, queryStripped);
     const maxLen = Math.max(titleStripped.length, queryStripped.length);
     const similarity = (maxLen - distance2) / maxLen;
