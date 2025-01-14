@@ -4065,6 +4065,7 @@ var _Sources = (() => {
         });
         const response = await this.requestManager.schedule(request, 1);
         json = typeof response.data === "string" ? JSON.parse(response.data) : response.data;
+        throw new Error(`Failed to parse json results: ${json}`);
       } else {
         const request = App.createRequest({
           url: `${this.MANGADEX_API}/at-home/server/${chapterId}${forcePort ? "?forcePort443=true" : ""}`,
