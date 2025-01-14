@@ -2450,6 +2450,244 @@ var _Sources = (() => {
     return result;
   }
 
+  // node_modules/fastest-levenshtein/esm/mod.js
+  var peq = new Uint32Array(65536);
+  var myers_32 = (a, b) => {
+    const n = a.length;
+    const m = b.length;
+    const lst = 1 << n - 1;
+    let pv = -1;
+    let mv = 0;
+    let sc = n;
+    let i = n;
+    while (i--) {
+      peq[a.charCodeAt(i)] |= 1 << i;
+    }
+    for (i = 0; i < m; i++) {
+      let eq = peq[b.charCodeAt(i)];
+      const xv = eq | mv;
+      eq |= (eq & pv) + pv ^ pv;
+      mv |= ~(eq | pv);
+      pv &= eq;
+      if (mv & lst) {
+        sc++;
+      }
+      if (pv & lst) {
+        sc--;
+      }
+      mv = mv << 1 | 1;
+      pv = pv << 1 | ~(xv | mv);
+      mv &= xv;
+    }
+    i = n;
+    while (i--) {
+      peq[a.charCodeAt(i)] = 0;
+    }
+    return sc;
+  };
+  var myers_x = (b, a) => {
+    const n = a.length;
+    const m = b.length;
+    const mhc = [];
+    const phc = [];
+    const hsize = Math.ceil(n / 32);
+    const vsize = Math.ceil(m / 32);
+    for (let i = 0; i < hsize; i++) {
+      phc[i] = -1;
+      mhc[i] = 0;
+    }
+    let j = 0;
+    for (; j < vsize - 1; j++) {
+      let mv2 = 0;
+      let pv2 = -1;
+      const start2 = j * 32;
+      const vlen2 = Math.min(32, m) + start2;
+      for (let k = start2; k < vlen2; k++) {
+        peq[b.charCodeAt(k)] |= 1 << k;
+      }
+      for (let i = 0; i < n; i++) {
+        const eq = peq[a.charCodeAt(i)];
+        const pb = phc[i / 32 | 0] >>> i & 1;
+        const mb = mhc[i / 32 | 0] >>> i & 1;
+        const xv = eq | mv2;
+        const xh = ((eq | mb) & pv2) + pv2 ^ pv2 | eq | mb;
+        let ph = mv2 | ~(xh | pv2);
+        let mh = pv2 & xh;
+        if (ph >>> 31 ^ pb) {
+          phc[i / 32 | 0] ^= 1 << i;
+        }
+        if (mh >>> 31 ^ mb) {
+          mhc[i / 32 | 0] ^= 1 << i;
+        }
+        ph = ph << 1 | pb;
+        mh = mh << 1 | mb;
+        pv2 = mh | ~(xv | ph);
+        mv2 = ph & xv;
+      }
+      for (let k = start2; k < vlen2; k++) {
+        peq[b.charCodeAt(k)] = 0;
+      }
+    }
+    let mv = 0;
+    let pv = -1;
+    const start = j * 32;
+    const vlen = Math.min(32, m - start) + start;
+    for (let k = start; k < vlen; k++) {
+      peq[b.charCodeAt(k)] |= 1 << k;
+    }
+    let score = m;
+    for (let i = 0; i < n; i++) {
+      const eq = peq[a.charCodeAt(i)];
+      const pb = phc[i / 32 | 0] >>> i & 1;
+      const mb = mhc[i / 32 | 0] >>> i & 1;
+      const xv = eq | mv;
+      const xh = ((eq | mb) & pv) + pv ^ pv | eq | mb;
+      let ph = mv | ~(xh | pv);
+      let mh = pv & xh;
+      score += ph >>> m - 1 & 1;
+      score -= mh >>> m - 1 & 1;
+      if (ph >>> 31 ^ pb) {
+        phc[i / 32 | 0] ^= 1 << i;
+      }
+      if (mh >>> 31 ^ mb) {
+        mhc[i / 32 | 0] ^= 1 << i;
+      }
+      ph = ph << 1 | pb;
+      mh = mh << 1 | mb;
+      pv = mh | ~(xv | ph);
+      mv = ph & xv;
+    }
+    for (let k = start; k < vlen; k++) {
+      peq[b.charCodeAt(k)] = 0;
+    }
+    return score;
+  };
+  var distance = (a, b) => {
+    if (a.length < b.length) {
+      const tmp = b;
+      b = a;
+      a = tmp;
+    }
+    if (b.length === 0) {
+      return a.length;
+    }
+    if (a.length <= 32) {
+      return myers_32(a, b);
+    }
+    return myers_x(a, b);
+  };
+
+  // src/MangaDex/RelevanceScore.ts
+  var relevanceScore = (title, queryTitle) => {
+    const titleWords = tokenize(title);
+    const queryWords = tokenize(queryTitle);
+    const titleStripped = titleWords.join("");
+    const queryStripped = queryWords.join("");
+    if (titleStripped === queryStripped) {
+      return 100;
+    }
+    const titlePhrase = titleWords.join(" ");
+    const queryPhrase = queryWords.join(" ");
+    const phraseAtStartRegex = new RegExp(`^\\b${queryPhrase}\\b`, "i");
+    if (phraseAtStartRegex.test(titlePhrase)) {
+      return 100;
+    }
+    const phraseAnywhereRegex = new RegExp(`\\b${queryPhrase}\\b`, "i");
+    if (phraseAnywhereRegex.test(titlePhrase)) {
+      return 95;
+    }
+    const adjacentSequencePosition = getAdjacentSequencePosition(titleWords, queryWords);
+    if (adjacentSequencePosition === 0) {
+      return 90;
+    } else if (adjacentSequencePosition > 0) {
+      return 85;
+    }
+    if (wordsAppearInOrder(titleWords, queryWords)) {
+      return 80;
+    }
+    if (allWordsPresent(titleWords, queryWords)) {
+      return 75;
+    }
+    let totalSimilarity = 0;
+    for (const queryWord of queryWords) {
+      let maxSimilarity = 0;
+      for (const titleWord of titleWords) {
+        const similarity = wordSimilarity(queryWord, titleWord);
+        if (similarity > maxSimilarity) {
+          maxSimilarity = similarity;
+        }
+      }
+      totalSimilarity += maxSimilarity;
+    }
+    const averageSimilarity = totalSimilarity / queryWords.length;
+    const finalScore = averageSimilarity * 70;
+    return Math.max(0, Math.min(70, finalScore));
+  };
+  var wordSimilarity = (word1, word2) => {
+    const stemmedWord1 = stemmer(word1);
+    const stemmedWord2 = stemmer(word2);
+    if (stemmedWord1 === stemmedWord2) {
+      return 1;
+    }
+    const maxLen = Math.max(stemmedWord1.length, stemmedWord2.length);
+    const distance2 = distance(stemmedWord1, stemmedWord2);
+    const similarity = (maxLen - distance2) / maxLen;
+    if (similarity >= 0.6) {
+      return similarity;
+    }
+    return 0;
+  };
+  var tokenize = (text) => {
+    return text.toLowerCase().replace(/[\u2019']/g, "").replace(/[^\w\s]/g, "").split(/\s+/).filter((word) => word.length > 0);
+  };
+  var allWordsPresent = (titleWords, queryWords) => {
+    for (const queryWord of queryWords) {
+      let found = false;
+      for (const titleWord of titleWords) {
+        if (wordSimilarity(queryWord, titleWord) >= 0.7) {
+          found = true;
+          break;
+        }
+      }
+      if (!found) {
+        return false;
+      }
+    }
+    return true;
+  };
+  var wordsAppearInOrder = (titleWords, queryWords) => {
+    let titleIndex = 0;
+    for (let i = 0; i < queryWords.length; i++) {
+      const queryWord = queryWords[i];
+      while (titleIndex < titleWords.length) {
+        if (wordSimilarity(queryWord, titleWords[titleIndex]) >= 0.7) {
+          titleIndex++;
+          break;
+        }
+        titleIndex++;
+      }
+      if (titleIndex === titleWords.length && i < queryWords.length - 1) {
+        return false;
+      }
+    }
+    return true;
+  };
+  var getAdjacentSequencePosition = (titleWords, queryWords) => {
+    for (let i = 0; i <= titleWords.length - queryWords.length; i++) {
+      let match = true;
+      for (let j = 0; j < queryWords.length; j++) {
+        if (wordSimilarity(queryWords[j], titleWords[i + j]) < 0.7) {
+          match = false;
+          break;
+        }
+      }
+      if (match) {
+        return i;
+      }
+    }
+    return -1;
+  };
+
   // src/MangaDex/MangaDexParser.ts
   var parseMangaList = async (object, source, thumbnailSelector, query) => {
     const results = [];
@@ -2470,7 +2708,7 @@ var _Sources = (() => {
       });
       let relevance = 0;
       if (query?.title) {
-        relevance = computeRelevance(title, query.title);
+        relevance = relevanceScore(title, query.title);
       }
       results.push({
         manga: partialManga,
@@ -2480,111 +2718,6 @@ var _Sources = (() => {
     results.sort((a, b) => b.relevance - a.relevance);
     return results.map((r) => r.manga);
   };
-  function tokenize(text) {
-    const tokens = text.toLowerCase().replace(/[^\w\s]/g, "").split(/\s+/).filter((word) => word.length > 0);
-    const splitTokens = tokens.flatMap((token) => splitByUppercase(token));
-    return splitTokens;
-  }
-  var levenshteinDistanceMemo = /* @__PURE__ */ (() => {
-    const cache = {};
-    return (a, b) => {
-      const key = `${a}|${b}`;
-      if (key in cache) {
-        return cache[key];
-      }
-      const an = a.length;
-      const bn = b.length;
-      if (an === 0) return bn;
-      if (bn === 0) return an;
-      const matrix = [];
-      for (let i = 0; i <= an; i++) {
-        matrix[i] = [i];
-      }
-      for (let j = 0; j <= bn; j++) {
-        matrix[0][j] = j;
-      }
-      for (let i = 1; i <= an; i++) {
-        for (let j = 1; j <= bn; j++) {
-          if (a.charAt(i - 1) === b.charAt(j - 1)) {
-            matrix[i][j] = matrix[i - 1][j - 1];
-          } else {
-            matrix[i][j] = Math.min(
-              matrix[i - 1][j - 1] + 1,
-              matrix[i][j - 1] + 1,
-              matrix[i - 1][j] + 1
-            );
-          }
-        }
-      }
-      const distance = matrix[an][bn];
-      cache[key] = distance;
-      return distance;
-    };
-  })();
-  function wordSimilarity(word1, word2) {
-    const stemmedWord1 = stemmer(word1);
-    const stemmedWord2 = stemmer(word2);
-    if (stemmedWord1 === stemmedWord2) {
-      return 1;
-    }
-    const maxLen = Math.max(stemmedWord1.length, stemmedWord2.length);
-    const distance = levenshteinDistanceMemo(stemmedWord1, stemmedWord2);
-    const similarity = (maxLen - distance) / maxLen;
-    if (similarity >= 0.7) {
-      return similarity;
-    }
-    return 0;
-  }
-  function splitByUppercase(text) {
-    return text.replace(/([a-z])([A-Z])/g, "$1 $2").replace(/([A-Z]+)([A-Z][a-z])/g, "$1 $2").split(/\s+/).filter((word) => word.length > 0);
-  }
-  function computeRelevance(title, queryTitle) {
-    const titleWords = tokenize(title);
-    const queryWords = tokenize(queryTitle);
-    const titleNoSpace = titleWords.join("");
-    const queryNoSpace = queryWords.join("");
-    if (titleNoSpace === queryNoSpace) {
-      return 100;
-    }
-    const distanceNoSpace = levenshteinDistanceMemo(titleNoSpace, queryNoSpace);
-    const maxLenNoSpace = Math.max(titleNoSpace.length, queryNoSpace.length);
-    const similarityNoSpace = (maxLenNoSpace - distanceNoSpace) / maxLenNoSpace;
-    let maxSimilarity = 0;
-    if (similarityNoSpace >= 0.8) {
-      maxSimilarity = similarityNoSpace * 100;
-    }
-    let totalSimilarity = 0;
-    const maxPotentialSimilarity = queryWords.length;
-    let lastMatchedPositionInTitle = -1;
-    for (let i = 0; i < queryWords.length; i++) {
-      const queryWord = queryWords[i];
-      let bestSimilarity = 0;
-      let bestPositionInTitle = -1;
-      for (let j = 0; j < titleWords.length; j++) {
-        const titleWord = titleWords[j];
-        const similarity = wordSimilarity(queryWord, titleWord);
-        if (similarity > bestSimilarity) {
-          bestSimilarity = similarity;
-          bestPositionInTitle = j;
-        }
-      }
-      if (bestSimilarity > 0) {
-        let orderMultiplier = 1;
-        if (lastMatchedPositionInTitle !== -1 && bestPositionInTitle !== -1) {
-          if (bestPositionInTitle > lastMatchedPositionInTitle) {
-            orderMultiplier += 0.1;
-          } else {
-            orderMultiplier -= 0.1;
-          }
-        }
-        lastMatchedPositionInTitle = bestPositionInTitle;
-        totalSimilarity += bestSimilarity * orderMultiplier;
-      }
-    }
-    const normalizedSimilarity = totalSimilarity / maxPotentialSimilarity * 100;
-    const finalSimilarity = Math.max(maxSimilarity, normalizedSimilarity);
-    return Math.max(0, Math.min(100, finalSimilarity));
-  }
 
   // src/MangaDex/external/tag.json
   var tag_default = [
