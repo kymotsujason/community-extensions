@@ -3120,49 +3120,40 @@ var _Sources = (() => {
     }
     const titlePhrase = titleWords.join(" ");
     const queryPhrase = queryWords.join(" ");
-    if (titlePhrase.includes(queryPhrase)) {
+    const phraseAtStartRegex = new RegExp(`^\\b${queryPhrase}\\b`, "i");
+    if (phraseAtStartRegex.test(titlePhrase)) {
       return 100;
     }
-    const distance2 = distance(titleStripped, queryStripped);
-    const maxLen = Math.max(titleStripped.length, queryStripped.length);
-    const similarity = (maxLen - distance2) / maxLen;
-    let maxSimilarity = 0;
-    if (similarity >= 0.8) {
-      maxSimilarity = similarity * 100;
+    const phraseAnywhereRegex = new RegExp(`\\b${queryPhrase}\\b`, "i");
+    if (phraseAnywhereRegex.test(titlePhrase)) {
+      return 95;
+    }
+    const adjacentSequencePosition = getAdjacentSequencePosition(titleWords, queryWords);
+    if (adjacentSequencePosition === 0) {
+      return 90;
+    } else if (adjacentSequencePosition > 0) {
+      return 85;
+    }
+    if (wordsAppearInOrder(titleWords, queryWords)) {
+      return 80;
+    }
+    if (allWordsPresent(titleWords, queryWords)) {
+      return 75;
     }
     let totalSimilarity = 0;
-    const maxPotentialSimilarity = queryWords.length;
-    let lastMatchedPositionInTitle = -1;
-    for (let i = 0; i < queryWords.length; i++) {
-      const queryWord = queryWords[i];
-      let bestSimilarity = 0;
-      let bestPositionInTitle = -1;
-      for (let j = 0; j < titleWords.length; j++) {
-        const titleWord = titleWords[j];
-        const similarity2 = wordSimilarity(queryWord, titleWord);
-        if (similarity2 > bestSimilarity) {
-          bestSimilarity = similarity2;
-          bestPositionInTitle = j;
+    for (const queryWord of queryWords) {
+      let maxSimilarity = 0;
+      for (const titleWord of titleWords) {
+        const similarity = wordSimilarity(queryWord, titleWord);
+        if (similarity > maxSimilarity) {
+          maxSimilarity = similarity;
         }
       }
-      if (bestSimilarity > 0) {
-        let orderMultiplier = 1;
-        if (lastMatchedPositionInTitle !== -1 && bestPositionInTitle !== -1) {
-          if (bestPositionInTitle === lastMatchedPositionInTitle + 1) {
-            orderMultiplier += 0.5;
-          } else if (bestPositionInTitle > lastMatchedPositionInTitle) {
-            orderMultiplier += 0.1;
-          } else {
-            orderMultiplier -= 0.1;
-          }
-        }
-        lastMatchedPositionInTitle = bestPositionInTitle;
-        totalSimilarity += bestSimilarity * orderMultiplier;
-      }
+      totalSimilarity += maxSimilarity;
     }
-    const normalizedSimilarity = totalSimilarity / maxPotentialSimilarity * 100;
-    const finalSimilarity = Math.max(maxSimilarity, normalizedSimilarity);
-    return Math.max(0, Math.min(100, finalSimilarity));
+    const averageSimilarity = totalSimilarity / queryWords.length;
+    const finalScore = averageSimilarity * 70;
+    return Math.max(0, Math.min(70, finalScore));
   };
   var wordSimilarity = (word1, word2) => {
     const stemmedWord1 = stemmer(word1);
@@ -3173,18 +3164,60 @@ var _Sources = (() => {
     const maxLen = Math.max(stemmedWord1.length, stemmedWord2.length);
     const distance2 = distance(stemmedWord1, stemmedWord2);
     const similarity = (maxLen - distance2) / maxLen;
-    if (similarity >= 0.7) {
+    if (similarity >= 0.6) {
       return similarity;
     }
     return 0;
   };
   var tokenize = (text) => {
-    const tokens = text.toLowerCase().replace(/[^\w\s]/g, "").split(/\s+/).filter((word) => word.length > 0);
-    const splitTokens = tokens.flatMap((token) => splitByUppercase(token));
-    return splitTokens;
+    return text.toLowerCase().replace(/[\u2019']/g, "").replace(/[^\w\s]/g, "").split(/\s+/).filter((word) => word.length > 0);
   };
-  var splitByUppercase = (text) => {
-    return text.replace(/([a-z])([A-Z])/g, "$1 $2").replace(/([A-Z]+)([A-Z][a-z])/g, "$1 $2").split(/\s+/).filter((word) => word.length > 0);
+  var allWordsPresent = (titleWords, queryWords) => {
+    for (const queryWord of queryWords) {
+      let found = false;
+      for (const titleWord of titleWords) {
+        if (wordSimilarity(queryWord, titleWord) >= 0.7) {
+          found = true;
+          break;
+        }
+      }
+      if (!found) {
+        return false;
+      }
+    }
+    return true;
+  };
+  var wordsAppearInOrder = (titleWords, queryWords) => {
+    let titleIndex = 0;
+    for (let i = 0; i < queryWords.length; i++) {
+      const queryWord = queryWords[i];
+      while (titleIndex < titleWords.length) {
+        if (wordSimilarity(queryWord, titleWords[titleIndex]) >= 0.7) {
+          titleIndex++;
+          break;
+        }
+        titleIndex++;
+      }
+      if (titleIndex === titleWords.length && i < queryWords.length - 1) {
+        return false;
+      }
+    }
+    return true;
+  };
+  var getAdjacentSequencePosition = (titleWords, queryWords) => {
+    for (let i = 0; i <= titleWords.length - queryWords.length; i++) {
+      let match = true;
+      for (let j = 0; j < queryWords.length; j++) {
+        if (wordSimilarity(queryWords[j], titleWords[i + j]) < 0.7) {
+          match = false;
+          break;
+        }
+      }
+      if (match) {
+        return i;
+      }
+    }
+    return -1;
   };
 
   // src/BatoTo/BatoToParser.ts
