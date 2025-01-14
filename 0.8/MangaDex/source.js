@@ -4141,11 +4141,11 @@ var _Sources = (() => {
         );
       }
       const request = App.createRequest({
-        url: `${getProxyServer}`,
+        url: `${getProxyServer(this.stateManager)}`,
         method: "HEAD"
       });
       const response = await this.requestManager.schedule(request, 1);
-      throw new Error(`@@@@@@@@@@@@@@@@@@@ ${response.status}`);
+      console.log(`@@@@@@@@@@@@@@@@@@@@@@@@@@@ ${response.status}`);
       await Promise.all(promises);
     }
     async getViewMoreItems(homepageSectionId, metadata) {
