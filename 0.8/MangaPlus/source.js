@@ -1322,7 +1322,7 @@ var _Sources = (() => {
   var API_URL = "https://jumpg-webapi.tokyo-cdn.com/api";
   var langCode = "ENGLISH" /* ENGLISH */;
   var MangaPlusInfo = {
-    version: "2.0.3",
+    version: "2.0.4",
     name: "MangaPlus",
     icon: "icon.png",
     author: "Rinto-kun",
