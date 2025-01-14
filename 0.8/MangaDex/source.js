@@ -4040,25 +4040,30 @@ var _Sources = (() => {
       this.checkId(chapterId);
       const dataSaver = await getDataSaver(this.stateManager);
       const forcePort = await forcePort443(this.stateManager);
-      const request = App.createRequest({
-        url: `${this.MANGADEX_API}/at-home/server/${chapterId}${forcePort ? "?forcePort443=true" : ""}`,
-        method: "GET"
-      });
-      const response = await this.requestManager.schedule(request, 1);
-      const json = typeof response.data === "string" ? JSON.parse(response.data) : response.data;
+      const proxyURL = await getProxyServer(this.stateManager);
+      let json;
+      if (proxyURL != "") {
+        const url = new URLBuilder(proxyURL).addPathComponent("manga").addQueryParameter("chapterId", `{${chapterId}}`).buildUrl();
+        const request = App.createRequest({
+          url,
+          method: "GET"
+        });
+        const response = await this.requestManager.schedule(request, 1);
+        json = typeof response.data === "string" ? JSON.parse(response.data) : response.data;
+      } else {
+        const request = App.createRequest({
+          url: `${this.MANGADEX_API}/at-home/server/${chapterId}${forcePort ? "?forcePort443=true" : ""}`,
+          method: "GET"
+        });
+        const response = await this.requestManager.schedule(request, 1);
+        json = typeof response.data === "string" ? JSON.parse(response.data) : response.data;
+      }
       const serverUrl = json.baseUrl;
       const chapterDetails = json.chapter;
       let pages;
       if (dataSaver) {
         pages = chapterDetails.dataSaver.map((x) => `${serverUrl}/data-saver/${chapterDetails.hash}/${x}`);
       } else {
-        const proxyURL = await getProxyServer(this.stateManager);
-        const url = new URLBuilder(proxyURL).addPathComponent("manga").addQueryParameter("chapterDetailsHash", `{${chapterDetails.hash}}`).buildUrl();
-        const request2 = App.createRequest({
-          url,
-          method: "GET"
-        });
-        const response2 = await this.requestManager.schedule(request2, 1);
         pages = chapterDetails.data.map((x) => `${serverUrl}/data/${chapterDetails.hash}/${x}`);
       }
       return App.createChapterDetails({
