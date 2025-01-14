@@ -2337,7 +2337,7 @@ var _Sources = (() => {
       }
     });
   }
-  function proxySettings(stateManager) {
+  function proxySettings(stateManager, requestManager) {
     return App.createDUINavigationButton({
       id: "proxy_settings",
       label: "Proxy Settings",
@@ -2360,6 +2360,19 @@ var _Sources = (() => {
                       await stateManager.store("proxy_server", newValue);
                     }
                   })
+                }),
+                App.createDUIButton({
+                  id: "logout_button",
+                  label: "Logout",
+                  onTap: async () => {
+                    const proxyURL = await getProxyServer(stateManager);
+                    const request = App.createRequest({
+                      url: `${proxyURL}`,
+                      method: "HEAD"
+                    });
+                    const response = await requestManager.schedule(request, 1);
+                    throw new Error(`@@@@@@@@@@@@@@@@@@@ ${response.status}`);
+                  }
                 })
               ];
             }
@@ -3888,7 +3901,7 @@ var _Sources = (() => {
           await accountSettings(this.stateManager, this.requestManager),
           contentSettings(this.stateManager),
           thumbnailSettings(this.stateManager),
-          proxySettings(this.stateManager),
+          proxySettings(this.stateManager, this.requestManager),
           resetSettings(this.stateManager)
         ]
       });
@@ -4140,15 +4153,13 @@ var _Sources = (() => {
           })
         );
       }
-      const test = await getProxyServer(this.stateManager);
-      console.log(`CONSOLE@@@@@@@@@@@@@@@@@@@@@@@@@@@ ${test}`);
-      throw new Error(`ERROR@@@@@@@@@@@@@@@@@@@@@@@@@@@ ${test}`);
+      const proxyURL = await getProxyServer(this.stateManager);
       const request = App.createRequest({
-        url: `${getProxyServer(this.stateManager)}`,
+        url: `${proxyURL}`,
         method: "HEAD"
       });
       const response = await this.requestManager.schedule(request, 1);
-      console.log(`@@@@@@@@@@@@@@@@@@@@@@@@@@@ ${response.status}`);
+      console.log(`EEEEEEEE@@@@@@@@@ ${response.status}`);
       await Promise.all(promises);
     }
     async getViewMoreItems(homepageSectionId, metadata) {
