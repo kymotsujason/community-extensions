@@ -2362,16 +2362,15 @@ var _Sources = (() => {
                   })
                 }),
                 App.createDUIButton({
-                  id: "logout_button",
-                  label: "Logout",
+                  id: "test_proxy_server",
+                  label: "Test Proxy Server (check server logs)",
                   onTap: async () => {
                     const proxyURL = await getProxyServer(stateManager);
                     const request = App.createRequest({
                       url: `${proxyURL}`,
                       method: "HEAD"
                     });
-                    const response = await requestManager.schedule(request, 1);
-                    throw new Error(`@@@@@@@@@@@@@@@@@@@`);
+                    await requestManager.schedule(request, 1);
                   }
                 })
               ];
@@ -4154,12 +4153,13 @@ var _Sources = (() => {
         );
       }
       const proxyURL = await getProxyServer(this.stateManager);
+      const url = new URLBuilder(proxyURL).buildUrl();
       const request = App.createRequest({
-        url: `${proxyURL}`,
-        method: "HEAD"
+        url,
+        method: "GET"
       });
       const response = await this.requestManager.schedule(request, 1);
-      console.log(`EEEEEEEE@@@@@@@@@ ${response.status}`);
+      throw new Error(`@@ ${response.status}`);
       await Promise.all(promises);
     }
     async getViewMoreItems(homepageSectionId, metadata) {
