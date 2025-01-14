@@ -36,7 +36,10 @@ import {
     getAccessToken,
     authEndpointRequest,
     saveAccessToken,
-    forcePort443
+    forcePort443,
+    proxySettings,
+    getProxyServer,
+    enableProxyServer
 } from './MangaDexSettings'
 
 import {
@@ -64,7 +67,7 @@ export const MangaDexInfo: SourceInfo = {
     description: 'Extension that pulls manga from MangaDex',
     icon: 'icon.png',
     name: 'MangaDex',
-    version: '3.0.7',
+    version: '3.0.8',
     authorWebsite: 'https://github.com/nar1n',
     websiteBaseURL: MANGADEX_DOMAIN,
     contentRating: ContentRating.EVERYONE,
@@ -84,10 +87,19 @@ export class MangaDex implements ChapterProviding, SearchResultsProviding, HomeP
         requestTimeout: 20000,
         interceptor: {
             interceptRequest: async (request: Request) => {
-                // Impossible to have undefined headers, ensured by the app
-                request.headers = {
-                    ...request.headers,
-                    referer: `${this.MANGADEX_DOMAIN}/`
+                const proxyURL = await getProxyServer(this.stateManager)
+                const proxyEnabled = await enableProxyServer(this.stateManager)
+                if (proxyEnabled && proxyURL != '' && request.url.includes('data')) {
+                    request.headers = {
+                        ...request.headers,
+                        referer: `${proxyURL}/`
+                    }
+                } else {
+                    // Impossible to have undefined headers, ensured by the app
+                    request.headers = {
+                        ...request.headers,
+                        referer: `${this.MANGADEX_DOMAIN}/`
+                    }
                 }
 
                 let accessToken = await getAccessToken(this.stateManager)
@@ -128,6 +140,7 @@ export class MangaDex implements ChapterProviding, SearchResultsProviding, HomeP
                 await accountSettings(this.stateManager, this.requestManager),
                 contentSettings(this.stateManager),
                 thumbnailSettings(this.stateManager),
+                proxySettings(this.stateManager, this.requestManager),
                 resetSettings(this.stateManager)
             ]
         })
@@ -323,14 +336,33 @@ export class MangaDex implements ChapterProviding, SearchResultsProviding, HomeP
 
         const dataSaver = await getDataSaver(this.stateManager)
         const forcePort = await forcePort443(this.stateManager)
+        const proxyURL = await getProxyServer(this.stateManager)
+        const proxyEnabled = await enableProxyServer(this.stateManager)
 
-        const request = App.createRequest({
-            url: `${this.MANGADEX_API}/at-home/server/${chapterId}${forcePort ? '?forcePort443=true' : ''}`,
-            method: 'GET'
-        })
+        let json
 
-        const response = await this.requestManager.schedule(request, 1)
-        const json = (typeof response.data === 'string') ? JSON.parse(response.data) : response.data
+        if (proxyEnabled && proxyURL != '') {
+            const url = new URLBuilder(proxyURL)
+                .addPathComponent('manga')
+                .addQueryParameter('chapterId', `${chapterId}`)
+                .buildUrl()
+
+            const request = App.createRequest({
+                url: url,
+                method: 'GET'
+            })
+
+            const response = await this.requestManager.schedule(request, 1)
+            json = (typeof response.data === 'string') ? JSON.parse(response.data) : response.data
+        } else {
+            const request = App.createRequest({
+                url: `${this.MANGADEX_API}/at-home/server/${chapterId}${forcePort ? '?forcePort443=true' : ''}`,
+                method: 'GET'
+            })
+    
+            const response = await this.requestManager.schedule(request, 1)
+            json = (typeof response.data === 'string') ? JSON.parse(response.data) : response.data
+        }
         const serverUrl = json.baseUrl
         const chapterDetails = json.chapter
 
@@ -491,7 +523,6 @@ export class MangaDex implements ChapterProviding, SearchResultsProviding, HomeP
                 })
             )
         }
-
         // Make sure the function completes
         await Promise.all(promises)
     }

@@ -70,6 +70,14 @@ export async function saveAccessToken(stateManager: SourceStateManager, accessTo
     }
 }
 
+export async function getProxyServer(stateManager: SourceStateManager) {
+    return (await stateManager.retrieve('proxy_server') ?? '')
+}
+
+export async function enableProxyServer(stateManager: SourceStateManager) {
+    return (await stateManager.retrieve('enable_proxy_server') ?? false)
+}
+
 export function contentSettings(stateManager: SourceStateManager) {
     return App.createDUINavigationButton({
         id: 'content_settings',
@@ -357,5 +365,57 @@ export function resetSettings(stateManager: SourceStateManager) {
                 stateManager.store('search_thumbnail', null),
                 stateManager.store('manga_thumbnail', null)])
         }
+    })
+}
+
+export function proxySettings(stateManager: SourceStateManager, requestManager: RequestManager) {
+    return App.createDUINavigationButton({
+        id: 'proxy_settings',
+        label: 'Proxy Settings',
+        form: App.createDUIForm({
+            sections: async () => [
+                App.createDUISection({
+                    isHidden: false,
+                    id: 'proxy',
+                    rows: async () => {
+                        await Promise.all([
+                            getProxyServer(stateManager),
+                            enableProxyServer(stateManager)
+                        ])
+                        return await [
+                            App.createDUISwitch({
+                                id: 'enable_proxy_server',
+                                label: 'Enable Proxy Server',
+                                value: App.createDUIBinding({
+                                    get: async () => enableProxyServer(stateManager),
+                                    set: async (newValue) => { await stateManager.store('enable_proxy_server', newValue) }
+                                })
+                            }),
+                            App.createDUIInputField({
+                                id: 'proxy_server',
+                                label: 'Proxy Server',
+                                value: App.createDUIBinding({
+                                    get: async () => getProxyServer(stateManager),
+                                    set: async (newValue) => { await stateManager.store('proxy_server', newValue) }
+                                })
+                            }),
+                            App.createDUIButton({
+                                id: 'test_proxy_server',
+                                label: 'Test Proxy Server (check server logs)',
+                                onTap: async () => {
+                                    const proxyURL = await getProxyServer(stateManager)
+                                    const request = App.createRequest({
+                                        url: `${proxyURL}`,
+                                        method: 'HEAD'
+                                    })
+                                
+                                    await requestManager.schedule(request, 1)
+                                }
+                            })
+                        ]
+                    }
+                })
+            ]
+        })
     })
 }
