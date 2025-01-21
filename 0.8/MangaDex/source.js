@@ -3876,10 +3876,19 @@ var _Sources = (() => {
         requestTimeout: 2e4,
         interceptor: {
           interceptRequest: async (request) => {
-            request.headers = {
-              ...request.headers,
-              referer: `${this.MANGADEX_DOMAIN}/`
-            };
+            const proxyURL = await getProxyServer(this.stateManager);
+            const proxyEnabled = await enableProxyServer(this.stateManager);
+            if (proxyEnabled && proxyURL != "") {
+              request.headers = {
+                ...request.headers,
+                referer: `${proxyURL}/`
+              };
+            } else {
+              request.headers = {
+                ...request.headers,
+                referer: `${this.MANGADEX_DOMAIN}/`
+              };
+            }
             let accessToken = await getAccessToken(this.stateManager);
             if (request.url.includes("auth/") || !accessToken) return request;
             if (Number(accessToken.tokenBody.exp) <= Date.now() / 1e3 - 60) {
