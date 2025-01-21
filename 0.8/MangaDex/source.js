@@ -3878,7 +3878,7 @@ var _Sources = (() => {
           interceptRequest: async (request) => {
             const proxyURL = await getProxyServer(this.stateManager);
             const proxyEnabled = await enableProxyServer(this.stateManager);
-            if (proxyEnabled && proxyURL != "") {
+            if (proxyEnabled && proxyURL != "" && request.url.includes("data")) {
               request.headers = {
                 ...request.headers,
                 referer: `${proxyURL}/`
